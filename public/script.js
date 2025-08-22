@@ -3,44 +3,45 @@
 // ==========================
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
-
 let localStream;
 let peerConnection;
 
-const socket = new WebSocket(
-  (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host
-);
+const socket = new WebSocket("ws://localhost:3000");
+
 
 const config = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
 };
 
-// Start camera automatically when page loads
+// Start camera
 async function startCamera() {
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    localVideo.srcObject = localStream;
-  } catch (err) {
-    console.error("Camera error:", err);
+  if (!localStream) {
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideo.srcObject = localStream;
+    } catch (err) {
+      console.error("Camera error:", err);
+    }
   }
 }
 
+// Create Peer Connection
 function createPeerConnection() {
+  if (peerConnection) return; // already exists
+
   peerConnection = new RTCPeerConnection(config);
 
-  // Add local tracks so remote peer sees our video/audio
+  // Add local tracks
   localStream.getTracks().forEach(track => {
     peerConnection.addTrack(track, localStream);
   });
 
-  // Show remote video when received
+  // Remote video
   peerConnection.ontrack = (event) => {
-    if (!remoteVideo.srcObject) {
-      remoteVideo.srcObject = event.streams[0];
-    }
+    remoteVideo.srcObject = event.streams[0];
   };
 
-  // ICE candidates exchange
+  // ICE candidates
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
       socket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
@@ -48,18 +49,37 @@ function createPeerConnection() {
   };
 }
 
-// Handle signaling
-socket.onmessage = async (message) => {
-  const data = JSON.parse(message.data);
+// Initialize call
+async function initCall(isInitiator) {
+  await startCamera();
+  createPeerConnection();
+
+  if (isInitiator) {
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    socket.send(JSON.stringify({ type: "offer", offer }));
+  }
+}
+
+// ==========================
+// WebSocket Signaling
+// ==========================
+socket.onopen = () => {
+  console.log("Connected to server, initializing call...");
+  initCall(true); // initiator by default
+};
+
+socket.onmessage = async (msg) => {
+  const data = JSON.parse(msg.data);
+
+  if (!peerConnection) await initCall(false);
 
   switch (data.type) {
     case "offer":
-      await startCamera();
-      createPeerConnection();
       await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
       const answer = await peerConnection.createAnswer();
       await peerConnection.setLocalDescription(answer);
-      socket.send(JSON.stringify({ type: "answer", answer: answer }));
+      socket.send(JSON.stringify({ type: "answer", answer }));
       break;
 
     case "answer":
@@ -74,7 +94,6 @@ socket.onmessage = async (message) => {
       }
       break;
 
-    // Handle game + chat messages
     case "move":
       updateBoard(data.cell, data.player);
       break;
@@ -83,30 +102,10 @@ socket.onmessage = async (message) => {
       const p = document.createElement("p");
       p.textContent = `Friend: ${data.message}`;
       chatMessages.appendChild(p);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
       break;
   }
 };
-
-// When connected to server, make an offer
-socket.onopen = async () => {
-  await startCamera();
-  createPeerConnection();
-
-  const offer = await peerConnection.createOffer();
-  await peerConnection.setLocalDescription(offer);
-  socket.send(JSON.stringify({ type: "offer", offer: offer }));
-};
-
-// ==========================
-// Reaction System
-// ==========================
-document.querySelectorAll(".emoji").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const display = document.getElementById("reactionDisplay");
-    display.textContent = btn.textContent;
-    setTimeout(() => display.textContent = "", 2000); // fade after 2s
-  });
-});
 
 // ==========================
 // 🎮 Tic Tac Toe Game Logic
@@ -117,7 +116,7 @@ const restartBtn = document.getElementById("restartBtn");
 
 let currentPlayer = "X";
 let gameActive = true;
-let gameState = ["", "", "", "", "", "", "", "", ""];
+let gameState = Array(9).fill("");
 
 const winningConditions = [
   [0,1,2], [3,4,5], [6,7,8],
@@ -135,26 +134,24 @@ function handleCellClick(e) {
   cell.textContent = currentPlayer;
   cell.classList.add("taken");
 
-  // Broadcast move to other player
+  // Broadcast move
   socket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer }));
 
   checkWinner();
 }
 
-// Sync game board when receiving move
 function updateBoard(index, player) {
   gameState[index] = player;
   board[index].textContent = player;
   board[index].classList.add("taken");
-
-  checkWinner(true); // true = skip rebroadcast
+  checkWinner(true);
 }
 
 function checkWinner(skipBroadcast = false) {
   let roundWon = false;
 
   for (let condition of winningConditions) {
-    const [a, b, c] = condition;
+    const [a,b,c] = condition;
     if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
       roundWon = true;
       break;
@@ -180,7 +177,7 @@ function checkWinner(skipBroadcast = false) {
 function restartGame() {
   currentPlayer = "X";
   gameActive = true;
-  gameState = ["", "", "", "", "", "", "", "", ""];
+  gameState.fill("");
   statusText.textContent = "Player X's Turn";
 
   board.forEach(cell => {
@@ -193,7 +190,7 @@ board.forEach(cell => cell.addEventListener("click", handleCellClick));
 restartBtn.addEventListener("click", restartGame);
 
 // ==========================
-// Simple Chat (synced)
+// 💬 Simple Chat
 // ==========================
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
@@ -201,15 +198,13 @@ const chatMessages = document.getElementById("chatMessages");
 
 sendBtn.addEventListener("click", () => {
   const msg = chatInput.value.trim();
-  if (msg) {
-    // Show my own message
-    const p = document.createElement("p");
-    p.textContent = "You: " + msg;
-    chatMessages.appendChild(p);
+  if (!msg) return;
 
-    // Send to other player
-    socket.send(JSON.stringify({ type: "chat", message: msg }));
+  const p = document.createElement("p");
+  p.textContent = "You: " + msg;
+  chatMessages.appendChild(p);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    chatInput.value = "";
-  }
+  socket.send(JSON.stringify({ type: "chat", message: msg }));
+  chatInput.value = "";
 });

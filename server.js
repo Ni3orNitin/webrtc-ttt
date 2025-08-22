@@ -1,4 +1,3 @@
-// server.js
 const path = require("path");
 const express = require("express");
 const http = require("http");
@@ -7,20 +6,22 @@ const WebSocket = require("ws");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Serve static files from /public
+// Serve static files
 app.use(express.static(path.join(__dirname, "public")));
 
 // Health check
 app.get("/healthz", (_req, res) => res.send("ok"));
 
+// HTTP server
 const server = http.createServer(app);
+
+// WebSocket server on same HTTP server
 const wss = new WebSocket.Server({ server });
 
-// WebSocket signaling
+// WebSocket signaling + broadcast
 wss.on("connection", (ws) => {
   console.log("✅ New client connected");
 
-  // Keep-alive (helps prevent timeout on some hosts)
   ws.isAlive = true;
   ws.on("pong", () => (ws.isAlive = true));
 
@@ -35,7 +36,7 @@ wss.on("connection", (ws) => {
       return;
     }
 
-    // ✅ Broadcast to all other clients
+    // Broadcast to other clients
     wss.clients.forEach((client) => {
       if (client !== ws && client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify(data));
@@ -46,7 +47,7 @@ wss.on("connection", (ws) => {
   ws.on("close", () => console.log("❌ Client disconnected"));
 });
 
-// Ping clients periodically (avoid idle disconnects)
+// Ping clients periodically
 setInterval(() => {
   wss.clients.forEach((ws) => {
     if (ws.isAlive === false) return ws.terminate();
@@ -55,6 +56,7 @@ setInterval(() => {
   });
 }, 30000);
 
+// Start server
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
