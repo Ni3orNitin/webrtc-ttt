@@ -28,19 +28,19 @@ async function startCamera() {
 function createPeerConnection() {
   peerConnection = new RTCPeerConnection(config);
 
-  // ✅ Add local tracks so remote peer sees our video/audio
+  // Add local tracks so remote peer sees our video/audio
   localStream.getTracks().forEach(track => {
     peerConnection.addTrack(track, localStream);
   });
 
-  // ✅ Show remote video when received
+  // Show remote video when received
   peerConnection.ontrack = (event) => {
     if (!remoteVideo.srcObject) {
       remoteVideo.srcObject = event.streams[0];
     }
   };
 
-  // ✅ ICE candidates exchange
+  // ICE candidates exchange
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
       socket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
@@ -74,7 +74,7 @@ socket.onmessage = async (message) => {
       }
       break;
 
-    // ✅ Handle game + chat messages
+    // Handle game + chat messages
     case "move":
       updateBoard(data.cell, data.player);
       break;
@@ -98,7 +98,7 @@ socket.onopen = async () => {
 };
 
 // ==========================
-// 😀 Reaction System
+// Reaction System
 // ==========================
 document.querySelectorAll(".emoji").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -135,13 +135,13 @@ function handleCellClick(e) {
   cell.textContent = currentPlayer;
   cell.classList.add("taken");
 
-  // ✅ Broadcast move to other player
+  // Broadcast move to other player
   socket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer }));
 
   checkWinner();
 }
 
-// ✅ Sync game board when receiving move
+// Sync game board when receiving move
 function updateBoard(index, player) {
   gameState[index] = player;
   board[index].textContent = player;
@@ -193,7 +193,7 @@ board.forEach(cell => cell.addEventListener("click", handleCellClick));
 restartBtn.addEventListener("click", restartGame);
 
 // ==========================
-// 💬 Simple Chat (synced)
+// Simple Chat (synced)
 // ==========================
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
@@ -207,7 +207,7 @@ sendBtn.addEventListener("click", () => {
     p.textContent = "You: " + msg;
     chatMessages.appendChild(p);
 
-    // ✅ Send to other player
+    // Send to other player
     socket.send(JSON.stringify({ type: "chat", message: msg }));
 
     chatInput.value = "";
