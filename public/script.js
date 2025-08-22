@@ -7,7 +7,7 @@ const joinBtn = document.getElementById("joinBtn"); // Get the new button
 
 // NOTE: You MUST replace this URL with the one from your Render deployment.
 // It should look like "wss://your-app-name.onrender.com".
-const signalingServerUrl = "wss://your-render-app-name.onrender.com";
+const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
 
 let localStream;
 let peerConnection;
@@ -27,8 +27,10 @@ async function startLocalStream() {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localVideo.srcObject = localStream;
         console.log("✅ Local camera started.");
+        return localStream; // Return the stream for use in other functions
     } catch (err) {
         console.error("❌ Failed to get local media stream:", err);
+        throw err; // Rethrow the error to stop execution
     }
 }
 
@@ -70,70 +72,77 @@ async function startCall(initiator) {
 }
 
 async function joinCall() {
-    // FIX: Connect to the signaling server only when the user joins
-    signalingSocket = new WebSocket(signalingServerUrl);
-
-    signalingSocket.onopen = async () => {
-        console.log("✅ Connected to signaling server.");
+    try {
+        // FIX: Start local stream and wait for it to be ready before connecting
         await startLocalStream();
-        // Signal readiness to the server to begin the handshake
-        signalingSocket.send(JSON.stringify({ type: 'client_ready' }));
-    };
-
-    signalingSocket.onmessage = async (message) => {
-        const data = JSON.parse(message.data);
         
-        switch (data.type) {
-            case 'peer_connected':
-                console.log("➡️ Another peer is available, starting call.");
-                startCall(true);
-                break;
+        // Connect to the signaling server only when the user joins
+        signalingSocket = new WebSocket(signalingServerUrl);
+        
+        signalingSocket.onopen = () => {
+             console.log("✅ Connected to signaling server.");
+             // Signal readiness to the server to begin the handshake
+             signalingSocket.send(JSON.stringify({ type: 'client_ready' }));
+        };
 
-            case 'offer':
-                console.log("⬅️ Received offer.");
-                startCall(false);
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                signalingSocket.send(JSON.stringify({ type: 'answer', answer: answer }));
-                break;
-
-            case 'answer':
-                console.log("⬅️ Received answer.");
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-                break;
-                
-            case 'candidate':
-                if (data.candidate) {
-                    try {
-                        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-                        console.log("⬅️ Added ICE candidate.");
-                    } catch (err) {
-                        console.error("❌ Error adding received ICE candidate:", err);
-                    }
-                }
-                break;
-
-            case 'move':
-                updateBoard(data.cell, data.player);
-                break;
+        signalingSocket.onmessage = async (message) => {
+            const data = JSON.parse(message.data);
             
-            case 'restart':
-                resetGame();
-                break;
+            switch (data.type) {
+                case 'peer_connected':
+                    console.log("➡️ Another peer is available, starting call.");
+                    startCall(true);
+                    break;
 
-            case 'chat':
-                const p = document.createElement("p");
-                p.textContent = `Friend: ${data.message}`;
-                chatMessages.appendChild(p);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-                break;
-        }
-    };
+                case 'offer':
+                    console.log("⬅️ Received offer.");
+                    startCall(false);
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    signalingSocket.send(JSON.stringify({ type: 'answer', answer: answer }));
+                    break;
 
-    // Disable the button after click to prevent multiple connections
-    joinBtn.disabled = true;
-    joinBtn.textContent = 'Connecting...';
+                case 'answer':
+                    console.log("⬅️ Received answer.");
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    break;
+                    
+                case 'candidate':
+                    if (data.candidate) {
+                        try {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                            console.log("⬅️ Added ICE candidate.");
+                        } catch (err) {
+                            console.error("❌ Error adding received ICE candidate:", err);
+                        }
+                    }
+                    break;
+
+                case 'move':
+                    updateBoard(data.cell, data.player);
+                    break;
+                
+                case 'restart':
+                    resetGame();
+                    break;
+
+                case 'chat':
+                    const p = document.createElement("p");
+                    p.textContent = `Friend: ${data.message}`;
+                    chatMessages.appendChild(p);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    break;
+            }
+        };
+
+        // Disable the button after click to prevent multiple connections
+        joinBtn.disabled = true;
+        joinBtn.textContent = 'Connecting...';
+    } catch (err) {
+        // Handle the error from startLocalStream, which means no camera access
+        console.error("❌ Could not join call:", err);
+    }
 }
 
 // Add event listener to the new button
