@@ -6,14 +6,55 @@
   <title>Video Call Game App</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    /* Quick Tic Tac Toe Styling */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1000px;
+      padding: 10px;
+      display: grid;
+      gap: 15px;
+    }
+
+    /* 🎥 Video section */
+    .video-section {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    video {
+      width: 48%;
+      max-height: 250px;
+      background: #000;
+      border-radius: 8px;
+    }
+    @media (max-width: 600px) {
+      video {
+        width: 100%;
+      }
+    }
+
+    /* 🎮 Game section */
+    .game-section {
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
     .board {
       display: grid;
-      grid-template-columns: repeat(3, 100px);
-      grid-template-rows: repeat(3, 100px);
+      grid-template-columns: repeat(3, 1fr);
       gap: 5px;
-      justify-content: center;
-      margin-top: 10px;
+      max-width: 320px;
+      margin: 10px auto;
     }
     .cell {
       width: 100px;
@@ -32,22 +73,57 @@
       background: #ddd;
     }
     .status {
-      text-align: center;
       margin-top: 10px;
       font-size: 1.2rem;
       font-weight: bold;
+    }
+
+    /* 💬 Chat section */
+    .chat-section {
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    #chatMessages {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+      border: 1px solid #ddd;
+      padding: 5px;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+    #chatInput {
+      width: 70%;
+      padding: 8px;
+    }
+    #sendBtn {
+      padding: 8px 12px;
+    }
+
+    /* 📱 Mobile tweaks */
+    @media (max-width: 600px) {
+      .cell {
+        width: 80px;
+        height: 80px;
+        font-size: 1.5rem;
+      }
+      #chatInput {
+        width: 65%;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Video Call Section -->
+    <!-- 🎥 Video Call Section -->
     <div class="video-section">
-      <video id="localVideo" autoplay muted></video>
-      <video id="remoteVideo" autoplay></video>
+      <video id="localVideo" autoplay muted playsinline></video>
+      <video id="remoteVideo" autoplay playsinline></video>
     </div>
 
-    <!-- Tic Tac Toe Game Section -->
+    <!-- 🎮 Tic Tac Toe Game Section -->
     <div class="game-section">
       <h3>Tic Tac Toe</h3>
       <div class="board" id="board">
@@ -65,7 +141,7 @@
       <button id="restartBtn">Restart Game</button>
     </div>
 
-    <!-- Chat Section -->
+    <!-- 💬 Chat Section -->
     <div class="chat-section">
       <h3>Chat / Reactions</h3>
       <input type="text" id="chatInput" placeholder="Type your message...">

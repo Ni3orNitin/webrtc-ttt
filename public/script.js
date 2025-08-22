@@ -11,7 +11,6 @@ const socket = new WebSocket(
   (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host
 );
 
-
 const config = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
 };
@@ -29,17 +28,19 @@ async function startCamera() {
 function createPeerConnection() {
   peerConnection = new RTCPeerConnection(config);
 
-  // Add local tracks
+  // ✅ Add local tracks so remote peer sees our video/audio
   localStream.getTracks().forEach(track => {
     peerConnection.addTrack(track, localStream);
   });
 
-  // Show remote video
+  // ✅ Show remote video when received
   peerConnection.ontrack = (event) => {
-    remoteVideo.srcObject = event.streams[0];
+    if (!remoteVideo.srcObject) {
+      remoteVideo.srcObject = event.streams[0];
+    }
   };
 
-  // ICE candidates
+  // ✅ ICE candidates exchange
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
       socket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
@@ -53,6 +54,7 @@ socket.onmessage = async (message) => {
 
   switch (data.type) {
     case "offer":
+      await startCamera();
       createPeerConnection();
       await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
       const answer = await peerConnection.createAnswer();
@@ -70,6 +72,17 @@ socket.onmessage = async (message) => {
       } catch (err) {
         console.error("Error adding candidate:", err);
       }
+      break;
+
+    // ✅ Handle game + chat messages
+    case "move":
+      updateBoard(data.cell, data.player);
+      break;
+
+    case "chat":
+      const p = document.createElement("p");
+      p.textContent = `Friend: ${data.message}`;
+      chatMessages.appendChild(p);
       break;
   }
 };
@@ -122,10 +135,22 @@ function handleCellClick(e) {
   cell.textContent = currentPlayer;
   cell.classList.add("taken");
 
+  // ✅ Broadcast move to other player
+  socket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer }));
+
   checkWinner();
 }
 
-function checkWinner() {
+// ✅ Sync game board when receiving move
+function updateBoard(index, player) {
+  gameState[index] = player;
+  board[index].textContent = player;
+  board[index].classList.add("taken");
+
+  checkWinner(true); // true = skip rebroadcast
+}
+
+function checkWinner(skipBroadcast = false) {
   let roundWon = false;
 
   for (let condition of winningConditions) {
@@ -168,7 +193,7 @@ board.forEach(cell => cell.addEventListener("click", handleCellClick));
 restartBtn.addEventListener("click", restartGame);
 
 // ==========================
-// 💬 Simple Chat
+// 💬 Simple Chat (synced)
 // ==========================
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
@@ -177,9 +202,14 @@ const chatMessages = document.getElementById("chatMessages");
 sendBtn.addEventListener("click", () => {
   const msg = chatInput.value.trim();
   if (msg) {
+    // Show my own message
     const p = document.createElement("p");
     p.textContent = "You: " + msg;
     chatMessages.appendChild(p);
+
+    // ✅ Send to other player
+    socket.send(JSON.stringify({ type: "chat", message: msg }));
+
     chatInput.value = "";
   }
 });

@@ -27,10 +27,18 @@ wss.on("connection", (ws) => {
   ws.on("message", (message) => {
     console.log("📩 Received:", message);
 
-    // Broadcast to all other clients
+    let data;
+    try {
+      data = JSON.parse(message);
+    } catch (err) {
+      console.error("❌ Invalid JSON:", message);
+      return;
+    }
+
+    // ✅ Broadcast to all other clients
     wss.clients.forEach((client) => {
       if (client !== ws && client.readyState === WebSocket.OPEN) {
-        client.send(message);
+        client.send(JSON.stringify(data));
       }
     });
   });
