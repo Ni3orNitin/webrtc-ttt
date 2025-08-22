@@ -6,7 +6,7 @@ const remoteVideo = document.getElementById("remoteVideo");
 
 // NOTE: You MUST replace this URL with the one from your Render deployment.
 // It should look like "wss://your-app-name.onrender.com".
-const signalingServerUrl = "wss://your-render-app-name.onrender.com";
+const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
 
 let localStream;
 let peerConnection;
