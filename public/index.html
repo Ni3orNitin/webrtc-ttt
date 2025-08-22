@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Call Game App</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Quick Tic Tac Toe Styling */
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 5px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .cell {
+      width: 100px;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      border: 2px solid #444;
+      cursor: pointer;
+      background: #f9f9f9;
+    }
+    .cell.taken {
+      cursor: not-allowed;
+      background: #ddd;
+    }
+    .status {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Video Call Section -->
+    <div class="video-section">
+      <video id="localVideo" autoplay muted></video>
+      <video id="remoteVideo" autoplay></video>
+    </div>
+
+    <!-- Tic Tac Toe Game Section -->
+    <div class="game-section">
+      <h3>Tic Tac Toe</h3>
+      <div class="board" id="board">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+      </div>
+      <div class="status" id="status">Player X's Turn</div>
+      <button id="restartBtn">Restart Game</button>
+    </div>
+
+    <!-- Chat Section -->
+    <div class="chat-section">
+      <h3>Chat / Reactions</h3>
+      <input type="text" id="chatInput" placeholder="Type your message...">
+      <button id="sendBtn">Send</button>
+      <div id="chatMessages"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
