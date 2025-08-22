@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 
-// FIX: Serve static files from the current directory
+// Serve static files from the current directory
 app.use(express.static(__dirname));
 
 const server = http.createServer(app);
@@ -18,8 +18,10 @@ let connectedClients = [];
 wss.on("connection", (ws) => {
   console.log("✅ New client connected.");
   connectedClients.push(ws);
-
-  // Your existing WebRTC signaling logic...
+  
+  if (connectedClients.length === 2) {
+    connectedClients[0].send(JSON.stringify({ type: 'peer_connected' }));
+  }
 
   ws.on("message", (message) => {
     let data;

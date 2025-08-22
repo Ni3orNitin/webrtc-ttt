@@ -3,20 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebRTC Video Call</title>
+    <title>WebRTC Game Room</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="video-container">
-        <div class="video-box">
-            <video id="localVideo" autoplay muted playsinline></video>
-            <p>Your Video</p>
+    <div class="container">
+        <h1>Video Call & Tic-Tac-Toe</h1>
+        
+        <!-- 🎥 Video Call Section -->
+        <div class="video-section">
+            <div class="video-box">
+                <video id="localVideo" autoplay muted playsinline></video>
+                <p>Your Video</p>
+            </div>
+            <div class="video-box">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <p>Friend's Video</p>
+            </div>
         </div>
-        <div class="video-box">
-            <video id="remoteVideo" autoplay playsinline></video>
-            <p>Friend's Video</p>
+
+        <div class="main-content">
+            <!-- 🎮 Game Section -->
+            <div class="game-section">
+                <h3>Tic-Tac-Toe</h3>
+                <div class="board" id="board">
+                    <div class="cell" data-index="0"></div>
+                    <div class="cell" data-index="1"></div>
+                    <div class="cell" data-index="2"></div>
+                    <div class="cell" data-index="3"></div>
+                    <div class="cell" data-index="4"></div>
+                    <div class="cell" data-index="5"></div>
+                    <div class="cell" data-index="6"></div>
+                    <div class="cell" data-index="7"></div>
+                    <div class="cell" data-index="8"></div>
+                </div>
+                <div class="status" id="status">Waiting for a player...</div>
+                <button id="restartBtn">Restart Game</button>
+            </div>
+
+            <!-- 💬 Chat Section -->
+            <div class="chat-section">
+                <h3>Chat</h3>
+                <div id="chatMessages"></div>
+                <div class="chat-input-container">
+                    <input type="text" id="chatInput" placeholder="Type a message...">
+                    <button id="sendBtn">Send</button>
+                </div>
+            </div>
         </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>

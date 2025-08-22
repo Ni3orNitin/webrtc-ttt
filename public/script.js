@@ -1,5 +1,5 @@
 // ==========================
-// 🎥 WebRTC Video Call Logic
+// 🎥 WebRTC Video Call Setup
 // ==========================
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
@@ -20,7 +20,7 @@ const iceServers = {
   ]
 };
 
-// 1. Get local camera stream
+// Start the local camera and get the stream
 async function startLocalStream() {
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -31,7 +31,7 @@ async function startLocalStream() {
     }
 }
 
-// 2. Create the RTCPeerConnection and handle events
+// Set up the WebRTC Peer Connection
 async function createPeerConnection() {
     if (peerConnection) return;
     peerConnection = new RTCPeerConnection(iceServers);
@@ -55,7 +55,7 @@ async function createPeerConnection() {
     };
 }
 
-// 3. Main function to start the call
+// Main function to start the call
 async function startCall(initiator) {
     isInitiator = initiator;
     await createPeerConnection();
@@ -68,11 +68,10 @@ async function startCall(initiator) {
     }
 }
 
-// 4. WebSocket signaling logic
+// Handle signaling messages
 signalingSocket.onopen = async () => {
     console.log("✅ Connected to signaling server.");
     await startLocalStream();
-    // Signal readiness to the server to begin the handshake
     signalingSocket.send(JSON.stringify({ type: 'client_ready' }));
 };
 
@@ -109,5 +108,121 @@ signalingSocket.onmessage = async (message) => {
                 }
             }
             break;
+
+        case 'move':
+            updateBoard(data.cell, data.player);
+            break;
+        
+        case 'restart':
+            resetGame();
+            break;
+
+        case 'chat':
+            const p = document.createElement("p");
+            p.textContent = `Friend: ${data.message}`;
+            chatMessages.appendChild(p);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            break;
     }
 };
+
+// ==========================
+// 🎮 Tic Tac Toe Game Logic
+// ==========================
+const board = document.querySelectorAll(".cell");
+const statusText = document.getElementById("status");
+const restartBtn = document.getElementById("restartBtn");
+
+let currentPlayer = "X";
+let gameActive = true;
+let gameState = Array(9).fill("");
+
+const winningConditions = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8],
+  [0, 3, 6], [1, 4, 7], [2, 5, 8],
+  [0, 4, 8], [2, 4, 6]
+];
+
+function handleCellClick(e) {
+  const cell = e.target;
+  const index = cell.getAttribute("data-index");
+
+  if (gameState[index] !== "" || !gameActive || currentPlayer !== (isInitiator ? "X" : "O")) {
+    return;
+  }
+
+  gameState[index] = currentPlayer;
+  cell.textContent = currentPlayer;
+  cell.classList.add("taken");
+
+  signalingSocket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer }));
+  checkWinnerAndSwitchTurn();
+}
+
+function updateBoard(index, player) {
+  gameState[index] = player;
+  board[index].textContent = player;
+  board[index].classList.add("taken");
+  checkWinnerAndSwitchTurn();
+}
+
+function checkWinnerAndSwitchTurn() {
+  let roundWon = false;
+  for (let condition of winningConditions) {
+    const [a, b, c] = condition;
+    if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+      roundWon = true;
+      break;
+    }
+  }
+
+  if (roundWon) {
+    statusText.textContent = `🎉 Player ${currentPlayer} Wins!`;
+    gameActive = false;
+  } else if (!gameState.includes("")) {
+    statusText.textContent = "😮 It's a Draw!";
+    gameActive = false;
+  } else {
+    currentPlayer = currentPlayer === "X" ? "O" : "X";
+    statusText.textContent = `Player ${currentPlayer}'s Turn`;
+  }
+}
+
+function restartGame() {
+    signalingSocket.send(JSON.stringify({ type: "restart" }));
+    resetGame();
+}
+
+function resetGame() {
+  currentPlayer = "X";
+  gameActive = true;
+  gameState.fill("");
+  statusText.textContent = "Player X's Turn";
+  board.forEach(cell => {
+    cell.textContent = "";
+    cell.classList.remove("taken");
+  });
+}
+
+board.forEach(cell => cell.addEventListener("click", handleCellClick));
+restartBtn.addEventListener("click", restartGame);
+
+// ==========================
+// 💬 Simple Chat
+// ==========================
+const chatInput = document.getElementById("chatInput");
+const sendBtn = document.getElementById("sendBtn");
+const chatMessages = document.getElementById("chatMessages");
+
+sendBtn.addEventListener("click", () => {
+  const msg = chatInput.value.trim();
+  if (!msg) return;
+
+  const p = document.createElement("p");
+  p.textContent = `You: ${msg}`;
+  chatMessages.appendChild(p);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  signalingSocket.send(JSON.stringify({ type: "chat", message: msg }));
+  chatInput.value = "";
+});
