@@ -7,8 +7,8 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 
-// Serve static files from the current directory
-app.use(express.static(__dirname));
+// FIX: Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
