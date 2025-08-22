@@ -8,6 +8,7 @@ let peerConnection;
 
 const socket = new WebSocket("ws://localhost:8080");
 
+
 const config = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
 };
@@ -26,7 +27,7 @@ async function startCamera() {
 
 // Create Peer Connection
 function createPeerConnection() {
-  if (peerConnection) return; // already exists
+  if (peerConnection) return;
 
   peerConnection = new RTCPeerConnection(config);
 
@@ -65,8 +66,7 @@ async function initCall(isInitiator) {
 // ==========================
 socket.onopen = () => {
   console.log("Connected to server, initializing call...");
-  // Changed port to 8080 to match server.js
-  initCall(true); // initiator by default
+  initCall(true);
 };
 
 socket.onmessage = async (msg) => {
@@ -95,8 +95,8 @@ socket.onmessage = async (msg) => {
       break;
 
     case "move":
-      // FIX: The remote client receives the move and updates the board, but does not check for a winner or change the turn.
-      updateBoard(data.cell, data.player);
+      // FIX: Apply the remote move directly and update the turn.
+      updateBoard(data.cell, data.player, data.nextPlayer);
       break;
 
     case "chat":
@@ -129,58 +129,64 @@ function handleCellClick(e) {
   const cell = e.target;
   const index = cell.getAttribute("data-index");
 
-  if (gameState[index] !== "" || !gameActive) return;
+  // Only allow a move if it is the current player's turn locally.
+  if (gameState[index] !== "" || !gameActive || currentPlayer !== (isInitiator() ? "X" : "O")) {
+      return;
+  }
 
-  // The move is valid, so update the local state and broadcast
   gameState[index] = currentPlayer;
   cell.textContent = currentPlayer;
   cell.classList.add("taken");
 
-  // Broadcast the move to the other player
-  socket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer }));
-  
-  // Check for a winner and update the turn *only* on the player who made the move
-  checkWinnerAndSwitchTurn();
+  let nextPlayer = currentPlayer === "X" ? "O" : "X";
+
+  // Check for win/draw after the local move
+  if (checkWinner()) {
+    nextPlayer = null; // Game is over
+  } else if (!gameState.includes("")) {
+    nextPlayer = null; // Draw
+  }
+
+  // Broadcast the move and the next player
+  socket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer, nextPlayer: nextPlayer }));
+
+  // Update local turn state
+  if (nextPlayer) {
+    currentPlayer = nextPlayer;
+    statusText.textContent = `Player ${currentPlayer}'s Turn`;
+  }
 }
 
-function updateBoard(index, player) {
-  // Update the board with the remote player's move
+function updateBoard(index, player, nextPlayer) {
+  // Apply the remote move
   gameState[index] = player;
   board[index].textContent = player;
   board[index].classList.add("taken");
-
-  // Check for a winner and update the turn *after* the remote move is applied
-  checkWinnerAndSwitchTurn();
+  
+  // Update local turn state based on the remote player's broadcast
+  if (nextPlayer) {
+    currentPlayer = nextPlayer;
+    statusText.textContent = `Player ${currentPlayer}'s Turn`;
+  } else {
+    // Game is over
+    if (checkWinner()) {
+      statusText.textContent = `🎉 Player ${player} Wins!`;
+    } else {
+      statusText.textContent = "😮 It's a Draw!";
+    }
+    gameActive = false;
+  }
 }
 
-function checkWinnerAndSwitchTurn() {
-  let roundWon = false;
-
+function checkWinner() {
   for (let condition of winningConditions) {
     const [a, b, c] = condition;
     if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
-      roundWon = true;
-      break;
+      return true;
     }
   }
-
-  if (roundWon) {
-    statusText.textContent = `🎉 Player ${currentPlayer} Wins!`;
-    gameActive = false;
-    return;
-  }
-
-  if (!gameState.includes("")) {
-    statusText.textContent = "😮 It's a Draw!";
-    gameActive = false;
-    return;
-  }
-
-  // Only flip the current player's turn if no winner or draw has occurred
-  currentPlayer = currentPlayer === "X" ? "O" : "X";
-  statusText.textContent = `Player ${currentPlayer}'s Turn`;
+  return false;
 }
-
 
 function restartGame() {
   currentPlayer = "X";
@@ -192,6 +198,13 @@ function restartGame() {
     cell.textContent = "";
     cell.classList.remove("taken");
   });
+}
+
+function isInitiator() {
+  // This is a simple way to determine which player is X or O.
+  // The first player to connect is the initiator (X).
+  // A more robust solution might use a server-assigned ID.
+  return localVideo.srcObject && remoteVideo.srcObject;
 }
 
 board.forEach(cell => cell.addEventListener("click", handleCellClick));
