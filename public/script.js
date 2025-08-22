@@ -5,7 +5,10 @@ const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 let localStream;
 let peerConnection;
+let isInitiator = false;
 
+// FIX: Change to your server's public IP address or use a dynamic solution.
+// For testing on the same network, replace 'localhost' with the server's IP.
 const socket = new WebSocket("ws://localhost:8080");
 
 
@@ -19,8 +22,9 @@ async function startCamera() {
     try {
       localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localVideo.srcObject = localStream;
+      console.log("✅ Camera started successfully.");
     } catch (err) {
-      console.error("Camera error:", err);
+      console.error("❌ Camera error:", err);
     }
   }
 }
@@ -38,23 +42,27 @@ function createPeerConnection() {
 
   // Remote video
   peerConnection.ontrack = (event) => {
+    console.log("✅ Remote track received.");
     remoteVideo.srcObject = event.streams[0];
   };
 
   // ICE candidates
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
+      console.log("➡️ Sending ICE candidate.");
       socket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
     }
   };
 }
 
 // Initialize call
-async function initCall(isInitiator) {
+async function initCall(initiator) {
+  isInitiator = initiator; // Store initiator status
   await startCamera();
   createPeerConnection();
 
   if (isInitiator) {
+    console.log("➡️ Creating WebRTC offer.");
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
     socket.send(JSON.stringify({ type: "offer", offer }));
@@ -65,38 +73,52 @@ async function initCall(isInitiator) {
 // WebSocket Signaling
 // ==========================
 socket.onopen = () => {
-  console.log("Connected to server, initializing call...");
+  console.log("✅ Connected to server, waiting for another player...");
+  // Automatically initiate a call when the socket opens
+  // A simple server-side handshake could be used for a more robust solution.
   initCall(true);
 };
 
 socket.onmessage = async (msg) => {
   const data = JSON.parse(msg.data);
-
-  if (!peerConnection) await initCall(false);
+  
+  // FIX: The second client to connect will receive the offer and initialize its side.
+  if (!peerConnection) {
+    await initCall(false);
+  }
 
   switch (data.type) {
     case "offer":
+      console.log("⬅️ Received offer.");
       await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
       const answer = await peerConnection.createAnswer();
       await peerConnection.setLocalDescription(answer);
+      console.log("➡️ Sending answer.");
       socket.send(JSON.stringify({ type: "answer", answer }));
       break;
 
     case "answer":
+      console.log("⬅️ Received answer.");
       await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
       break;
 
     case "candidate":
       try {
         await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        console.log("⬅️ Added ICE candidate.");
       } catch (err) {
-        console.error("Error adding candidate:", err);
+        console.error("❌ Error adding candidate:", err);
       }
       break;
 
     case "move":
-      // FIX: Apply the remote move directly and update the turn.
-      updateBoard(data.cell, data.player, data.nextPlayer);
+      console.log("⬅️ Received move:", data.cell);
+      updateBoard(data.cell, data.player);
+      break;
+    
+    case "restart":
+      console.log("⬅️ Received restart signal.");
+      resetGame();
       break;
 
     case "chat":
@@ -129,82 +151,67 @@ function handleCellClick(e) {
   const cell = e.target;
   const index = cell.getAttribute("data-index");
 
-  // Only allow a move if it is the current player's turn locally.
-  if (gameState[index] !== "" || !gameActive || currentPlayer !== (isInitiator() ? "X" : "O")) {
-      return;
+  // FIX: Use 'isInitiator' to determine player's symbol
+  const playerSymbol = isInitiator ? "X" : "O";
+
+  if (gameState[index] !== "" || !gameActive || currentPlayer !== playerSymbol) {
+    return;
   }
 
   gameState[index] = currentPlayer;
   cell.textContent = currentPlayer;
   cell.classList.add("taken");
 
-  let nextPlayer = currentPlayer === "X" ? "O" : "X";
-
-  // Check for win/draw after the local move
-  if (checkWinner()) {
-    nextPlayer = null; // Game is over
-  } else if (!gameState.includes("")) {
-    nextPlayer = null; // Draw
-  }
-
-  // Broadcast the move and the next player
-  socket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer, nextPlayer: nextPlayer }));
-
-  // Update local turn state
-  if (nextPlayer) {
-    currentPlayer = nextPlayer;
-    statusText.textContent = `Player ${currentPlayer}'s Turn`;
-  }
+  socket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer }));
+  
+  checkWinnerAndSwitchTurn();
 }
 
-function updateBoard(index, player, nextPlayer) {
-  // Apply the remote move
+function updateBoard(index, player) {
   gameState[index] = player;
   board[index].textContent = player;
   board[index].classList.add("taken");
-  
-  // Update local turn state based on the remote player's broadcast
-  if (nextPlayer) {
-    currentPlayer = nextPlayer;
-    statusText.textContent = `Player ${currentPlayer}'s Turn`;
-  } else {
-    // Game is over
-    if (checkWinner()) {
-      statusText.textContent = `🎉 Player ${player} Wins!`;
-    } else {
-      statusText.textContent = "😮 It's a Draw!";
-    }
-    gameActive = false;
-  }
+  checkWinnerAndSwitchTurn();
 }
 
-function checkWinner() {
+function checkWinnerAndSwitchTurn() {
+  let roundWon = false;
   for (let condition of winningConditions) {
     const [a, b, c] = condition;
     if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
-      return true;
+      roundWon = true;
+      break;
     }
   }
-  return false;
+
+  if (roundWon) {
+    statusText.textContent = `🎉 Player ${currentPlayer} Wins!`;
+    gameActive = false;
+  } else if (!gameState.includes("")) {
+    statusText.textContent = "😮 It's a Draw!";
+    gameActive = false;
+  } else {
+    // Switch turns
+    currentPlayer = currentPlayer === "X" ? "O" : "X";
+    statusText.textContent = `Player ${currentPlayer}'s Turn`;
+  }
 }
 
 function restartGame() {
+  // FIX: Send a message to the other client to sync the restart
+  socket.send(JSON.stringify({ type: "restart" }));
+  resetGame();
+}
+
+function resetGame() {
   currentPlayer = "X";
   gameActive = true;
   gameState.fill("");
   statusText.textContent = "Player X's Turn";
-
   board.forEach(cell => {
     cell.textContent = "";
     cell.classList.remove("taken");
   });
-}
-
-function isInitiator() {
-  // This is a simple way to determine which player is X or O.
-  // The first player to connect is the initiator (X).
-  // A more robust solution might use a server-assigned ID.
-  return localVideo.srcObject && remoteVideo.srcObject;
 }
 
 board.forEach(cell => cell.addEventListener("click", handleCellClick));
