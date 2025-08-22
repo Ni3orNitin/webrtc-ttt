@@ -6,8 +6,7 @@ const remoteVideo = document.getElementById("remoteVideo");
 let localStream;
 let peerConnection;
 
-const socket = new WebSocket("ws://localhost:3000");
-
+const socket = new WebSocket("ws://localhost:8080");
 
 const config = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
@@ -66,6 +65,7 @@ async function initCall(isInitiator) {
 // ==========================
 socket.onopen = () => {
   console.log("Connected to server, initializing call...");
+  // Changed port to 8080 to match server.js
   initCall(true); // initiator by default
 };
 
@@ -95,6 +95,7 @@ socket.onmessage = async (msg) => {
       break;
 
     case "move":
+      // FIX: The remote client receives the move and updates the board, but does not check for a winner or change the turn.
       updateBoard(data.cell, data.player);
       break;
 
@@ -119,9 +120,9 @@ let gameActive = true;
 let gameState = Array(9).fill("");
 
 const winningConditions = [
-  [0,1,2], [3,4,5], [6,7,8],
-  [0,3,6], [1,4,7], [2,5,8],
-  [0,4,8], [2,4,6]
+  [0, 1, 2], [3, 4, 5], [6, 7, 8],
+  [0, 3, 6], [1, 4, 7], [2, 5, 8],
+  [0, 4, 8], [2, 4, 6]
 ];
 
 function handleCellClick(e) {
@@ -130,28 +131,33 @@ function handleCellClick(e) {
 
   if (gameState[index] !== "" || !gameActive) return;
 
+  // The move is valid, so update the local state and broadcast
   gameState[index] = currentPlayer;
   cell.textContent = currentPlayer;
   cell.classList.add("taken");
 
-  // Broadcast move
+  // Broadcast the move to the other player
   socket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer }));
-
-  checkWinner();
+  
+  // Check for a winner and update the turn *only* on the player who made the move
+  checkWinnerAndSwitchTurn();
 }
 
 function updateBoard(index, player) {
+  // Update the board with the remote player's move
   gameState[index] = player;
   board[index].textContent = player;
   board[index].classList.add("taken");
-  checkWinner(true);
+
+  // Check for a winner and update the turn *after* the remote move is applied
+  checkWinnerAndSwitchTurn();
 }
 
-function checkWinner(skipBroadcast = false) {
+function checkWinnerAndSwitchTurn() {
   let roundWon = false;
 
   for (let condition of winningConditions) {
-    const [a,b,c] = condition;
+    const [a, b, c] = condition;
     if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
       roundWon = true;
       break;
@@ -170,9 +176,11 @@ function checkWinner(skipBroadcast = false) {
     return;
   }
 
+  // Only flip the current player's turn if no winner or draw has occurred
   currentPlayer = currentPlayer === "X" ? "O" : "X";
   statusText.textContent = `Player ${currentPlayer}'s Turn`;
 }
+
 
 function restartGame() {
   currentPlayer = "X";
