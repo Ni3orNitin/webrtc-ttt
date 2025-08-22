@@ -3,132 +3,131 @@
 // ==========================
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
+
+// NOTE: Replace 'localhost' with the server's local IP address
+// to test with two devices on the same network.
+const signalingServerUrl = "ws://localhost:8080";
+
 let localStream;
 let peerConnection;
 let isInitiator = false;
 
-// FIX: Change to your server's public IP address or use a dynamic solution.
-// For testing on the same network, replace 'localhost' with the server's IP.
-const socket = new WebSocket("ws://localhost:8080");
-
-
-const config = {
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+const signalingSocket = new WebSocket(signalingServerUrl);
+const iceServers = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" }
+  ]
 };
 
-// Start camera
-async function startCamera() {
-  if (!localStream) {
+// Start the local camera and get the stream
+async function startLocalStream() {
     try {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localVideo.srcObject = localStream;
-      console.log("✅ Camera started successfully.");
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+        console.log("✅ Local camera started.");
     } catch (err) {
-      console.error("❌ Camera error:", err);
+        console.error("❌ Failed to get local media stream:", err);
     }
-  }
 }
 
-// Create Peer Connection
+// Set up the WebRTC Peer Connection
 function createPeerConnection() {
-  if (peerConnection) return;
+    if (peerConnection) return;
+    peerConnection = new RTCPeerConnection(iceServers);
 
-  peerConnection = new RTCPeerConnection(config);
+    // Add local tracks to the peer connection
+    localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+    });
 
-  // Add local tracks
-  localStream.getTracks().forEach(track => {
-    peerConnection.addTrack(track, localStream);
-  });
+    // Handle remote streams
+    peerConnection.ontrack = (event) => {
+        if (event.streams && event.streams[0]) {
+            remoteVideo.srcObject = event.streams[0];
+            console.log("✅ Remote stream received.");
+        }
+    };
 
-  // Remote video
-  peerConnection.ontrack = (event) => {
-    console.log("✅ Remote track received.");
-    remoteVideo.srcObject = event.streams[0];
-  };
-
-  // ICE candidates
-  peerConnection.onicecandidate = (event) => {
-    if (event.candidate) {
-      console.log("➡️ Sending ICE candidate.");
-      socket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
-    }
-  };
+    // Send ICE candidates to the other peer via the signaling server
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            console.log("➡️ Sending ICE candidate.");
+            signalingSocket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
+        }
+    };
 }
 
-// Initialize call
-async function initCall(initiator) {
-  isInitiator = initiator; // Store initiator status
-  await startCamera();
-  createPeerConnection();
-
-  if (isInitiator) {
-    console.log("➡️ Creating WebRTC offer.");
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
-    socket.send(JSON.stringify({ type: "offer", offer }));
-  }
-}
-
-// ==========================
-// WebSocket Signaling
-// ==========================
-socket.onopen = () => {
-  console.log("✅ Connected to server, waiting for another player...");
-  // Automatically initiate a call when the socket opens
-  // A simple server-side handshake could be used for a more robust solution.
-  initCall(true);
+// Handle signaling messages
+signalingSocket.onopen = async () => {
+    console.log("✅ Connected to signaling server.");
+    await startLocalStream();
 };
 
-socket.onmessage = async (msg) => {
-  const data = JSON.parse(msg.data);
-  
-  // FIX: The second client to connect will receive the offer and initialize its side.
-  if (!peerConnection) {
-    await initCall(false);
-  }
-
-  switch (data.type) {
-    case "offer":
-      console.log("⬅️ Received offer.");
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-      console.log("➡️ Sending answer.");
-      socket.send(JSON.stringify({ type: "answer", answer }));
-      break;
-
-    case "answer":
-      console.log("⬅️ Received answer.");
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-      break;
-
-    case "candidate":
-      try {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-        console.log("⬅️ Added ICE candidate.");
-      } catch (err) {
-        console.error("❌ Error adding candidate:", err);
-      }
-      break;
-
-    case "move":
-      console.log("⬅️ Received move:", data.cell);
-      updateBoard(data.cell, data.player);
-      break;
+signalingSocket.onmessage = async (message) => {
+    const data = JSON.parse(message.data);
     
-    case "restart":
-      console.log("⬅️ Received restart signal.");
-      resetGame();
-      break;
+    switch (data.type) {
+        case 'user_joined':
+            // This is a simple handshake to start the call
+            console.log("➡️ Another user joined, creating offer.");
+            isInitiator = true;
+            createPeerConnection();
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            signalingSocket.send(JSON.stringify({ type: 'offer', offer: offer }));
+            break;
 
-    case "chat":
-      const p = document.createElement("p");
-      p.textContent = `Friend: ${data.message}`;
-      chatMessages.appendChild(p);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-      break;
-  }
+        case 'offer':
+            console.log("⬅️ Received offer.");
+            createPeerConnection();
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            signalingSocket.send(JSON.stringify({ type: 'answer', answer: answer }));
+            break;
+
+        case 'answer':
+            console.log("⬅️ Received answer.");
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            break;
+            
+        case 'candidate':
+            if (data.candidate) {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                    console.log("⬅️ Added ICE candidate.");
+                } catch (err) {
+                    console.error("❌ Error adding received ICE candidate:", err);
+                }
+            }
+            break;
+
+        case 'move':
+            updateBoard(data.cell, data.player);
+            break;
+        
+        case 'restart':
+            resetGame();
+            break;
+
+        case 'chat':
+            const p = document.createElement("p");
+            p.textContent = `Friend: ${data.message}`;
+            chatMessages.appendChild(p);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            break;
+    }
 };
+
+// Simple handshake to start the call
+signalingSocket.onopen = async () => {
+    console.log("✅ Connected to signaling server. Initiating handshake.");
+    signalingSocket.send(JSON.stringify({ type: 'join_call' }));
+    await startLocalStream();
+    // Delay creation of PC until a peer joins
+};
+
 
 // ==========================
 // 🎮 Tic Tac Toe Game Logic
@@ -151,10 +150,7 @@ function handleCellClick(e) {
   const cell = e.target;
   const index = cell.getAttribute("data-index");
 
-  // FIX: Use 'isInitiator' to determine player's symbol
-  const playerSymbol = isInitiator ? "X" : "O";
-
-  if (gameState[index] !== "" || !gameActive || currentPlayer !== playerSymbol) {
+  if (gameState[index] !== "" || !gameActive || currentPlayer !== (isInitiator ? "X" : "O")) {
     return;
   }
 
@@ -162,8 +158,7 @@ function handleCellClick(e) {
   cell.textContent = currentPlayer;
   cell.classList.add("taken");
 
-  socket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer }));
-  
+  signalingSocket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer }));
   checkWinnerAndSwitchTurn();
 }
 
@@ -191,16 +186,14 @@ function checkWinnerAndSwitchTurn() {
     statusText.textContent = "😮 It's a Draw!";
     gameActive = false;
   } else {
-    // Switch turns
     currentPlayer = currentPlayer === "X" ? "O" : "X";
     statusText.textContent = `Player ${currentPlayer}'s Turn`;
   }
 }
 
 function restartGame() {
-  // FIX: Send a message to the other client to sync the restart
-  socket.send(JSON.stringify({ type: "restart" }));
-  resetGame();
+    signalingSocket.send(JSON.stringify({ type: "restart" }));
+    resetGame();
 }
 
 function resetGame() {
@@ -229,10 +222,10 @@ sendBtn.addEventListener("click", () => {
   if (!msg) return;
 
   const p = document.createElement("p");
-  p.textContent = "You: " + msg;
+  p.textContent = `You: ${msg}`;
   chatMessages.appendChild(p);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 
-  socket.send(JSON.stringify({ type: "chat", message: msg }));
+  signalingSocket.send(JSON.stringify({ type: "chat", message: msg }));
   chatInput.value = "";
 });
