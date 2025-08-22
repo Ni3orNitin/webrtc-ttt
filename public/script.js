@@ -60,17 +60,18 @@ function createPeerConnection() {
 
 // Handle signaling messages
 signalingSocket.onopen = async () => {
-    console.log("✅ Connected to signaling server.");
+    console.log("✅ Connected to signaling server. Waiting for another peer...");
     await startLocalStream();
 };
 
 signalingSocket.onmessage = async (message) => {
     const data = JSON.parse(message.data);
     
+    // FIX: Remove the unnecessary if-block to prevent improper `initCall` calls.
     switch (data.type) {
-        case 'user_joined':
-            // This is a simple handshake to start the call
-            console.log("➡️ Another user joined, creating offer.");
+        case 'peer_connected':
+            // FIX: This message from the server tells the first client to initiate the call.
+            console.log("➡️ Another peer is available, creating offer.");
             isInitiator = true;
             createPeerConnection();
             const offer = await peerConnection.createOffer();
@@ -120,15 +121,6 @@ signalingSocket.onmessage = async (message) => {
     }
 };
 
-// Simple handshake to start the call
-signalingSocket.onopen = async () => {
-    console.log("✅ Connected to signaling server. Initiating handshake.");
-    signalingSocket.send(JSON.stringify({ type: 'join_call' }));
-    await startLocalStream();
-    // Delay creation of PC until a peer joins
-};
-
-
 // ==========================
 // 🎮 Tic Tac Toe Game Logic
 // ==========================
@@ -150,6 +142,7 @@ function handleCellClick(e) {
   const cell = e.target;
   const index = cell.getAttribute("data-index");
 
+  // FIX: Use 'isInitiator' to determine the correct player's turn.
   if (gameState[index] !== "" || !gameActive || currentPlayer !== (isInitiator ? "X" : "O")) {
     return;
   }
@@ -229,12 +222,3 @@ sendBtn.addEventListener("click", () => {
   signalingSocket.send(JSON.stringify({ type: "chat", message: msg }));
   chatInput.value = "";
 });
-
-// server.js
-// ...
-// Serve static files from the current directory
-app.use(express.static(__dirname));
-
-// Health check
-app.get("/healthz", (_req, res) => res.send("ok"));
-// ...

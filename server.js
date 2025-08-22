@@ -6,21 +6,22 @@ const WebSocket = require("ws");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Serve static files
-app.use(express.static(path.join(__dirname, ".")));
+// Serve static files from the current directory
+app.use(express.static(__dirname));
 
-// HTTP server
 const server = http.createServer(app);
-
-// WebSocket server on same HTTP server
 const wss = new WebSocket.Server({ server });
 
 let connectedClients = [];
 
-// WebSocket signaling + broadcast
 wss.on("connection", (ws) => {
   console.log("✅ New client connected.");
   connectedClients.push(ws);
+  
+  // FIX: When a second client connects, tell the first one to start the call.
+  if (connectedClients.length === 2) {
+    connectedClients[0].send(JSON.stringify({ type: 'peer_connected' }));
+  }
 
   ws.on("message", (message) => {
     console.log("📩 Received:", message.toString());
@@ -31,13 +32,6 @@ wss.on("connection", (ws) => {
     } catch (err) {
       console.error("❌ Invalid JSON:", message.toString());
       return;
-    }
-
-    // Handle initial join message to trigger the offer
-    if (data.type === 'join_call' && connectedClients.length === 2) {
-        // The second user to join will receive this message
-        connectedClients[0].send(JSON.stringify({ type: 'user_joined' }));
-        return;
     }
 
     // Broadcast to the other client (only one other client)
@@ -53,7 +47,6 @@ wss.on("connection", (ws) => {
   });
 });
 
-// Start server
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
