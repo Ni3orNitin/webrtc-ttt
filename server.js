@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 
-// FIX: Serve static files from the 'public' directory
+// This line correctly points the server to your 'public' folder.
 app.use(express.static(path.join(__dirname, 'public')));
 
 const server = http.createServer(app);
