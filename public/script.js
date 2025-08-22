@@ -229,3 +229,12 @@ sendBtn.addEventListener("click", () => {
   signalingSocket.send(JSON.stringify({ type: "chat", message: msg }));
   chatInput.value = "";
 });
+
+// server.js
+// ...
+// Serve static files from the current directory
+app.use(express.static(__dirname));
+
+// Health check
+app.get("/healthz", (_req, res) => res.send("ok"));
+// ...
