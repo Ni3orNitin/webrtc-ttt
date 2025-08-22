@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 
-// Serve static files from the current directory
+// FIX: Serve static files from the current directory
 app.use(express.static(__dirname));
 
 const server = http.createServer(app);
@@ -19,22 +19,23 @@ wss.on("connection", (ws) => {
   console.log("✅ New client connected.");
   connectedClients.push(ws);
 
-  // FIX: This section now handles the handshake based on a 'client_ready' message
-  ws.on('message', (message) => {
-    const data = JSON.parse(message.toString());
-    
-    if (data.type === 'client_ready' && connectedClients.length === 2) {
-      connectedClients[0].send(JSON.stringify({ type: 'peer_connected' }));
+  // Your existing WebRTC signaling logic...
+
+  ws.on("message", (message) => {
+    let data;
+    try {
+      data = JSON.parse(message.toString());
+    } catch (err) {
+      console.error("❌ Invalid JSON:", message.toString());
       return;
     }
-    
-    // Broadcast other signaling messages to the other client
+
     const otherClient = connectedClients.find(client => client !== ws);
     if (otherClient && otherClient.readyState === WebSocket.OPEN) {
       otherClient.send(JSON.stringify(data));
     }
   });
-  
+
   ws.on("close", () => {
     console.log("❌ Client disconnected.");
     connectedClients = connectedClients.filter(client => client !== ws);
