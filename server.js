@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 
-// This line correctly points the server to your 'public' folder.
+// Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 const server = http.createServer(app);
@@ -18,7 +18,7 @@ let connectedClients = [];
 wss.on("connection", (ws) => {
   console.log("✅ New client connected.");
   connectedClients.push(ws);
-  
+
   if (connectedClients.length === 2) {
     connectedClients[0].send(JSON.stringify({ type: 'peer_connected' }));
   }
