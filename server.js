@@ -18,7 +18,6 @@ wss.on("connection", (ws) => {
   console.log("✅ New client connected.");
   connectedClients.push(ws);
   
-  // FIX: When a second client connects, tell the first one to start the call.
   if (connectedClients.length === 2) {
     connectedClients[0].send(JSON.stringify({ type: 'peer_connected' }));
   }
@@ -34,7 +33,6 @@ wss.on("connection", (ws) => {
       return;
     }
 
-    // Broadcast to the other client (only one other client)
     const otherClient = connectedClients.find(client => client !== ws);
     if (otherClient && otherClient.readyState === WebSocket.OPEN) {
       otherClient.send(JSON.stringify(data));
