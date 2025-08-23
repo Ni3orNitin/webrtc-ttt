@@ -1,5 +1,5 @@
 // ==========================
-// ➡️ Final Consolidated script.js
+// ➡️ Final Consolidated script.js (with YouTube Sync)
 // ==========================
 
 // ==========================
@@ -141,6 +141,13 @@ async function joinCall() {
                     chatMessages.appendChild(p);
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                     break;
+                // FIX: New message types for YouTube sync
+                case 'youtube_state':
+                    handleYouTubeState(data.state, data.currentTime);
+                    break;
+                case 'youtube_video':
+                    handleYouTubeVideo(data.videoId);
+                    break;
             }
         };
 
@@ -232,7 +239,6 @@ function getYouTubeVideoId(url) {
     return (match && match[2].length === 11) ? match[2] : null;
 }
 
-// Asynchronously load the YouTube IFrame Player API code.
 const tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
 const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -244,12 +250,14 @@ window.onYouTubeIframeAPIReady = function() {
         width: '640',
         videoId: '',
         playerVars: { 'playsinline': 1 },
-        events: { 'onReady': onPlayerReady }
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+        }
     });
 };
 
 function onPlayerReady(event) {
-    // FIX: Use your playlist ID here
     event.target.loadPlaylist({
         list: 'PLIlng4MI3pW-5OQE84UnfPGJLf_of-91Y',
         listType: 'playlist',
@@ -258,11 +266,49 @@ function onPlayerReady(event) {
     });
 }
 
+// FIX: This new function sends player state changes
+function onPlayerStateChange(event) {
+    if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+        signalingSocket.send(JSON.stringify({
+            type: 'youtube_state',
+            state: event.data,
+            currentTime: player.getCurrentTime()
+        }));
+    }
+}
+
+function handleYouTubeState(state, currentTime) {
+    // FIX: Receive player state and sync the local player
+    switch (state) {
+        case YT.PlayerState.PLAYING:
+            player.seekTo(currentTime);
+            player.playVideo();
+            break;
+        case YT.PlayerState.PAUSED:
+        case YT.PlayerState.BUFFERING:
+            player.pauseVideo();
+            break;
+    }
+}
+
+function handleYouTubeVideo(videoId) {
+    // FIX: Receive a new video ID and load it
+    if (player) {
+        player.loadVideoById(videoId);
+    }
+}
+
 function handleYouTubeLoad() {
     const url = youtubeInput.value;
     const videoId = getYouTubeVideoId(url);
     if (videoId && player) {
         player.loadVideoById(videoId);
+        if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+            signalingSocket.send(JSON.stringify({
+                type: 'youtube_video',
+                videoId: videoId
+            }));
+        }
     } else {
         alert("Please enter a valid YouTube URL.");
     }
