@@ -8,50 +8,48 @@
 </head>
 <body>
     <div class="container">
-        <div class="video-header">
+        <div class="top-section">
             <div class="video-box">
                 <video id="localVideo" autoplay muted playsinline></video>
                 <p>Your Video</p>
-                <div class="video-controls">
-                    <button id="muteMicBtn">Mute Mic</button>
-                </div>
             </div>
-            <div class="join-button-container">
-                <button id="joinBtn">Join</button>
+            <div class="controls-area">
+                <button id="joinBtn">Join Call</button>
+                <button id="muteMicBtn">Mute Mic</button>
+                <button id="muteSpeakerBtn">Mute Speaker</button>
             </div>
             <div class="video-box">
                 <video id="remoteVideo" autoplay playsinline></video>
                 <p>Friend's Video</p>
-                <div class="video-controls">
-                    <button id="muteSpeakerBtn">Mute Speaker</button>
-                </div>
             </div>
         </div>
 
-        <div class="main-content">
-            <div class="left-section">
-                <div class="game-section">
-                    <h3>Tic-Tac-Toe</h3>
-                    <div class="board" id="board">
-                        <div class="cell" data-index="0"></div>
-                        <div class="cell" data-index="1"></div>
-                        <div class="cell" data-index="2"></div>
-                        <div class="cell" data-index="3"></div>
-                        <div class="cell" data-index="4"></div>
-                        <div class="cell" data-index="5"></div>
-                        <div class="cell" data-index="6"></div>
-                        <div class="cell" data-index="7"></div>
-                        <div class="cell" data-index="8"></div>
-                    </div>
-                    <div class="status" id="status">Waiting for a player...</div>
-                    <button id="restartBtn">Restart</button>
+        <div class="bottom-section">
+            <div class="game-section">
+                <h3>Tic-Tac-Toe</h3>
+                <div class="board" id="board">
+                    <div class="cell" data-index="0"></div>
+                    <div class="cell" data-index="1"></div>
+                    <div class="cell" data-index="2"></div>
+                    <div class="cell" data-index="3"></div>
+                    <div class="cell" data-index="4"></div>
+                    <div class="cell" data-index="5"></div>
+                    <div class="cell" data-index="6"></div>
+                    <div class="cell" data-index="7"></div>
+                    <div class="cell" data-index="8"></div>
                 </div>
+                <div class="status" id="status">Waiting for a player...</div>
+                <button id="restartBtn">Restart Game</button>
             </div>
 
-            <div class="right-section">
-                <div class="music-section">
+            <div class="extra-content">
+                <div class="youtube-section">
                     <h3>Music Player</h3>
                     <div id="youtube-player"></div>
+                    <div class="youtube-controls">
+                        <input type="text" id="youtubeInput" placeholder="Paste YouTube video URL here...">
+                        <button id="loadBtn">Load</button>
+                    </div>
                 </div>
                 <div class="chat-section">
                     <h3>Chat</h3>
@@ -64,7 +62,6 @@
             </div>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
