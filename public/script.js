@@ -389,7 +389,6 @@ function resetTicTacToeGame() {
 // ==========================
 // ➡️ Hangman Logic
 // ==========================
-// FIX: New function to initialize the Hangman UI
 function initializeHangmanUI() {
     hangmanDisplay.textContent = hangmanFigures[0];
     wordDisplay.textContent = "____";
@@ -627,6 +626,7 @@ ticTacToeBtn.addEventListener('click', () => {
 hangmanBtn.addEventListener('click', () => {
     switchGame('hangman');
     updateScoreDisplay();
+    initializeHangmanUI();
 });
 
 ticTacToeBoard.forEach(cell => cell.addEventListener("click", handleTicTacToeClick));

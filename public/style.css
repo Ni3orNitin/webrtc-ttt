@@ -23,24 +23,54 @@ h1, h3 {
     text-align: center;
 }
 
-.top-section {
-    display: flex;
+.main-grid-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: auto 1fr;
     gap: 20px;
-    width: 100%;
-    align-items: flex-start;
+    height: calc(100vh - 100px);
 }
 
-.left-side {
+/* Common box styles */
+.video-section, .game-hub, .youtube-section, .chat-section {
+    background-color: #1e1e1e;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
+    align-items: center;
+}
+
+.video-section {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
     gap: 20px;
-    flex: 2;
+}
+
+.game-hub {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+    text-align: center;
+    justify-content: flex-start;
+}
+
+.youtube-section {
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+}
+
+.chat-section {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+    height: 100%;
 }
 
 .video-container {
     display: flex;
     gap: 20px;
-    justify-content: space-around;
+    width: 100%;
+    justify-content: center;
 }
 
 .video-box {
@@ -65,33 +95,66 @@ video {
     color: #a0a0a0;
 }
 
-.right-side {
-    flex: 1;
+.controls-area, .game-selector {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10px;
 }
 
-.right-side .game-section {
-    background: #1e1e1e;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+.controls-area button, .game-selector button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    background-color: #6200ea;
+    color: #fff;
+    transition: background-color 0.2s ease;
+}
+
+.controls-area button:hover, .game-selector button:hover {
+    background-color: #3700b3;
+}
+
+.controls-area button.active, .game-selector button.active {
+    background-color: #b00020;
+    color: #fff;
+}
+
+.game-section {
+    width: 100%;
+}
+
+.game-selector {
+    margin-bottom: 20px;
+}
+
+.game-content {
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: space-between;
 }
 
 /* Hangman Styles */
 .hangman-display {
     font-family: monospace;
-    font-size: 2rem;
-    margin-bottom: 20px;
+    font-size: 1.5rem;
+    margin-bottom: 10px;
     color: #fff;
     white-space: pre;
-    height: 120px;
+    line-height: 1.2;
+    height: 100px;
 }
 
 .word-display {
     font-size: 2rem;
-    letter-spacing: 10px;
+    letter-spacing: 5px;
     margin-bottom: 15px;
 }
 
@@ -134,7 +197,7 @@ video {
     color: #888;
 }
 
-.right-side .status {
+.game-content .status {
     font-size: 1.2rem;
     font-weight: bold;
     margin: 10px 0;
@@ -142,7 +205,7 @@ video {
     color: #03dac6;
 }
 
-.right-side #restartBtn, .right-side #hangmanRestartBtn {
+.game-content button {
     padding: 12px;
     background-color: #bb86fc;
     color: #121212;
@@ -151,80 +214,18 @@ video {
     font-size: 1rem;
     cursor: pointer;
     transition: background-color 0.2s ease;
+    margin-top: 15px;
 }
 
-.right-side #restartBtn:hover, .right-side #hangmanRestartBtn:hover {
+.game-content button:hover {
     background-color: #a578e8;
-}
-
-.bottom-section {
-    display: flex;
-    gap: 20px;
-}
-
-.controls-area {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-    align-items: center;
-    margin-top: 10px;
-}
-
-.controls-area button, .game-selector button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    background-color: #6200ea;
-    color: #fff;
-    transition: background-color 0.2s ease;
-}
-
-.controls-area button:hover, .game-selector button:hover {
-    background-color: #3700b3;
-}
-
-.controls-area button.active, .game-selector button.active {
-    background-color: #b00020;
-    color: #fff;
-}
-
-.game-status-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex: 1;
-}
-
-.score-display-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 15px 30px;
-    background-color: #1e1e1e;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #fff;
-    gap: 10px;
-}
-
-.youtube-section, .chat-section {
-    background: #1e1e1e;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    width: 100%;
 }
 
 .youtube-controls {
     display: flex;
     gap: 10px;
     margin-top: 15px;
+    width: 100%;
 }
 
 #youtubeInput {
@@ -268,6 +269,7 @@ video {
     display: flex;
     flex-direction: column;
     gap: 5px;
+    width: 100%;
 }
 
 .chat-input-container {
@@ -302,56 +304,27 @@ video {
     display: none;
 }
 
-/* Mobile Responsiveness */
+/* FIX: Mobile Responsiveness */
 @media (max-width: 767px) {
-    .container {
-        padding: 10px;
+    .main-grid-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
     }
-
-    .top-section {
-        flex-direction: column;
-        gap: 10px;
+    
+    .video-section, .game-hub, .youtube-section, .chat-section {
+        grid-column: 1 / 2;
+        grid-row: auto;
     }
-
+    
     .video-container {
         flex-direction: column;
-        gap: 10px;
     }
-
-    .controls-area {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 10px;
-        justify-content: center;
-        margin-top: 10px;
-    }
-
-    .controls-area button, .game-selector button {
-        flex: 1;
-    }
-
-    .left-side, .right-side {
+    
+    .video-box {
         width: 100%;
-        max-width: none;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .bottom-section {
-        flex-direction: column;
-        gap: 10px;
     }
     
-    .board {
-        max-width: 270px;
-        grid-template-columns: repeat(3, 80px);
-        gap: 5px;
-        margin-top: 10px;
-    }
-    
-    .cell {
-        width: 80px;
-        height: 80px;
-        font-size: 2rem;
+    .controls-area {
+        flex-direction: column;
     }
 }
