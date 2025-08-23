@@ -27,18 +27,20 @@ h1, h3 {
     display: flex;
     gap: 20px;
     width: 100%;
+    align-items: flex-start;
 }
 
 .left-side {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    flex: 1;
+    flex: 2;
 }
 
 .video-container {
     display: flex;
     gap: 20px;
+    justify-content: space-around;
 }
 
 .video-box {
@@ -48,6 +50,8 @@ h1, h3 {
 
 video {
     width: 100%;
+    max-width: 450px;
+    height: auto;
     background: #000;
     border-radius: 12px;
     border: 2px solid #6200ea;
@@ -75,22 +79,45 @@ video {
     align-items: center;
 }
 
+/* Hangman Styles */
+.hangman-display {
+    font-family: monospace;
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #fff;
+    white-space: pre;
+    height: 120px;
+}
+
+.word-display {
+    font-size: 2rem;
+    letter-spacing: 10px;
+    margin-bottom: 15px;
+}
+
+.used-letters {
+    font-size: 1rem;
+    color: #a0a0a0;
+    margin-bottom: 15px;
+}
+
+/* Tic-Tac-Toe Board */
 .board {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
-    max-width: 200px;
+    max-width: 300px;
     margin: 15px auto;
 }
 
 .cell {
-    width: 60px;
-    height: 60px;
+    width: 100px;
+    height: 100px;
     background: #333;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2rem;
+    font-size: 3rem;
     font-weight: bold;
     cursor: pointer;
     border-radius: 8px;
@@ -108,25 +135,25 @@ video {
 }
 
 .right-side .status {
-    font-size: 1rem;
+    font-size: 1.2rem;
     font-weight: bold;
     margin: 10px 0;
     text-align: center;
     color: #03dac6;
 }
 
-.right-side #restartBtn {
-    padding: 8px 15px;
+.right-side #restartBtn, .right-side #hangmanRestartBtn {
+    padding: 12px;
     background-color: #bb86fc;
     color: #121212;
     border: none;
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 1rem;
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
 
-.right-side #restartBtn:hover {
+.right-side #restartBtn:hover, .right-side #hangmanRestartBtn:hover {
     background-color: #a578e8;
 }
 
@@ -137,13 +164,15 @@ video {
 
 .controls-area {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
     gap: 10px;
     justify-content: center;
     align-items: center;
+    margin-top: 10px;
 }
 
-.controls-area button {
+.controls-area button, .game-selector button {
     padding: 10px 20px;
     border: none;
     border-radius: 8px;
@@ -152,16 +181,36 @@ video {
     background-color: #6200ea;
     color: #fff;
     transition: background-color 0.2s ease;
-    margin: 0 5px;
 }
 
-.controls-area button:hover {
+.controls-area button:hover, .game-selector button:hover {
     background-color: #3700b3;
 }
 
-.controls-area button.active {
+.controls-area button.active, .game-selector button.active {
     background-color: #b00020;
     color: #fff;
+}
+
+.game-status-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+}
+
+.score-display-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px 30px;
+    background-color: #1e1e1e;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #fff;
+    gap: 10px;
 }
 
 .youtube-section, .chat-section {
@@ -249,6 +298,10 @@ video {
     background-color: #02a899;
 }
 
+.hidden {
+    display: none;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 767px) {
     .container {
@@ -270,9 +323,10 @@ video {
         flex-wrap: wrap;
         gap: 10px;
         justify-content: center;
+        margin-top: 10px;
     }
 
-    .controls-area button {
+    .controls-area button, .game-selector button {
         flex: 1;
     }
 
@@ -287,14 +341,14 @@ video {
         flex-direction: column;
         gap: 10px;
     }
-
+    
     .board {
         max-width: 270px;
         grid-template-columns: repeat(3, 80px);
         gap: 5px;
         margin-top: 10px;
     }
-
+    
     .cell {
         width: 80px;
         height: 80px;

@@ -24,10 +24,24 @@
                     <button id="joinBtn">Join Call</button>
                     <button id="muteMicBtn">Mute Mic</button>
                     <button id="muteSpeakerBtn">Mute Speaker</button>
+                    <button id="endCallBtn">End Call</button>
                 </div>
             </div>
+            
+            <div class="game-status-section">
+                <div class="score-display-box">
+                    <div id="playerXScore">You: 0</div>
+                    <div id="playerOScore">Your Friend: 0</div>
+                </div>
+            </div>
+            
             <div class="right-side">
-                <div class="game-section">
+                <div class="game-selector">
+                    <button id="ticTacToeBtn">Tic-Tac-Toe</button>
+                    <button id="hangmanBtn">Hangman</button>
+                </div>
+
+                <div class="game-section" id="ticTacToeGame">
                     <h3>Tic-Tac-Toe</h3>
                     <div class="board" id="board">
                         <div class="cell" data-index="0"></div>
@@ -42,6 +56,15 @@
                     </div>
                     <div class="status" id="status">Waiting for a player...</div>
                     <button id="restartBtn">Restart Game</button>
+                </div>
+
+                <div class="game-section hidden" id="hangmanGame">
+                    <h3>Hangman</h3>
+                    <div class="hangman-display" id="hangmanDisplay"></div>
+                    <div class="word-display" id="wordDisplay"></div>
+                    <div class="used-letters" id="usedLetters"></div>
+                    <div class="status" id="hangmanStatus">Waiting for a player...</div>
+                    <button id="hangmanRestartBtn">Restart Game</button>
                 </div>
             </div>
         </div>
