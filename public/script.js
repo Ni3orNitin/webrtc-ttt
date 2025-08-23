@@ -298,3 +298,43 @@ loadBtn.addEventListener('click', () => {
         alert("Please enter a valid YouTube URL.");
     }
 });
+
+
+// Add these lines near the top of your script.js file, along with your other const declarations
+const muteMicBtn = document.getElementById("muteMicBtn");
+const muteSpeakerBtn = document.getElementById("muteSpeakerBtn");
+
+// Add these event listeners after your other button listeners, for example, after joinBtn.addEventListener('click', joinCall);
+
+// Mic Mute Button Logic
+muteMicBtn.addEventListener('click', () => {
+    if (!localStream) return;
+    const audioTrack = localStream.getAudioTracks()[0];
+    if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        if (!audioTrack.enabled) {
+            muteMicBtn.textContent = 'Unmute Mic';
+            muteMicBtn.classList.add('active');
+        } else {
+            muteMicBtn.textContent = 'Mute Mic';
+            muteMicBtn.classList.remove('active');
+        }
+    }
+});
+
+// Speaker Mute Button Logic
+muteSpeakerBtn.addEventListener('click', () => {
+    if (!remoteVideo || !remoteVideo.srcObject) return;
+    const remoteStream = remoteVideo.srcObject;
+    const audioTrack = remoteStream.getAudioTracks()[0];
+    if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        if (!audioTrack.enabled) {
+            muteSpeakerBtn.textContent = 'Unmute Speaker';
+            muteSpeakerBtn.classList.add('active');
+        } else {
+            muteSpeakerBtn.textContent = 'Mute Speaker';
+            muteSpeakerBtn.classList.remove('active');
+        }
+    }
+});

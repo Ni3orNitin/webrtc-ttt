@@ -227,3 +227,32 @@ video {
     width: 100%;
     aspect-ratio: 16 / 9; /* Ensures the player is a standard video size */
 }
+
+
+/* Add this to your style.css */
+.controls {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.controls button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    background-color: #6200ea;
+    color: #fff;
+    transition: background-color 0.2s ease;
+    margin: 0 5px;
+}
+
+.controls button:hover {
+    background-color: #3700b3;
+}
+
+/* Style for when a button is active/muted */
+.controls button.active {
+    background-color: #b00020;
+    color: #fff;
+}
