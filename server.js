@@ -47,3 +47,14 @@ wss.on("connection", (ws) => {
 server.listen(PORT, HOST, () => {
   console.log(`🚀 Server running on http://${HOST}:${PORT}`);
 });
+
+
+// server.js
+// ... (existing code)
+
+// A simple endpoint to keep the server alive
+app.get('/healthz', (req, res) => {
+    res.status(200).send('ok');
+});
+
+// ... (existing code)
