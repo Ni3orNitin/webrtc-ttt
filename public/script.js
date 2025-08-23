@@ -338,3 +338,64 @@ muteSpeakerBtn.addEventListener('click', () => {
         }
     }
 });
+
+
+// Add this code block to the end of your script.js file.
+
+// ==========================
+// 🎵 YouTube Music Player
+// ==========================
+let player;
+const youtubeInput = document.getElementById("youtubeInput");
+const loadBtn = document.getElementById("loadBtn");
+
+// 1. Asynchronously load the YouTube IFrame Player API code.
+const tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+const firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+// 2. The API will call this function when the API code downloads.
+window.onYouTubeIframeAPIReady = function() {
+    // Create the video player after the API is ready
+    player = new YT.Player('youtube-player', {
+        height: '390',
+        width: '640',
+        videoId: '', // No video ID needed here
+        playerVars: {
+            'playsinline': 1
+        },
+        events: {
+            'onReady': onPlayerReady // This event will trigger playlist loading
+        }
+    });
+};
+
+function onPlayerReady(event) {
+    // 3. Load the playlist when the player is ready
+    // This is the corrected line with only the playlist ID
+    event.target.loadPlaylist({
+        list: 'PLIlng4MI3pW-5OQE84UnfPGJLf_of-91Y',
+        listType: 'playlist',
+        index: 0,
+        startSeconds: 0
+    });
+}
+
+// 4. Function to extract the YouTube video ID from a URL (this is still useful for single videos)
+function getYouTubeVideoId(url) {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+}
+
+// 5. Load video when the button is clicked
+loadBtn.addEventListener('click', () => {
+    const url = youtubeInput.value;
+    const videoId = getYouTubeVideoId(url);
+    if (videoId && player) {
+        player.loadVideoById(videoId);
+    } else {
+        alert("Please enter a valid YouTube URL.");
+    }
+});
