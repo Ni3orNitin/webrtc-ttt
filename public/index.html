@@ -9,55 +9,58 @@
 <body>
     <div class="container">
         <div class="top-section">
-            <div class="video-box">
-                <video id="localVideo" autoplay muted playsinline></video>
-                <p>Your Video</p>
+            <div class="left-side">
+                <div class="video-container">
+                    <div class="video-box">
+                        <video id="localVideo" autoplay muted playsinline></video>
+                        <p>Your Video</p>
+                    </div>
+                    <div class="video-box">
+                        <video id="remoteVideo" autoplay playsinline></video>
+                        <p>Friend's Video</p>
+                    </div>
+                </div>
+                <div class="controls-area">
+                    <button id="joinBtn">Join Call</button>
+                    <button id="muteMicBtn">Mute Mic</button>
+                    <button id="muteSpeakerBtn">Mute Speaker</button>
+                </div>
             </div>
-            <div class="controls-area">
-                <button id="joinBtn">Join Call</button>
-                <button id="muteMicBtn">Mute Mic</button>
-                <button id="muteSpeakerBtn">Mute Speaker</button>
-            </div>
-            <div class="video-box">
-                <video id="remoteVideo" autoplay playsinline></video>
-                <p>Friend's Video</p>
+            <div class="right-side">
+                <div class="game-section">
+                    <h3>Tic-Tac-Toe</h3>
+                    <div class="board" id="board">
+                        <div class="cell" data-index="0"></div>
+                        <div class="cell" data-index="1"></div>
+                        <div class="cell" data-index="2"></div>
+                        <div class="cell" data-index="3"></div>
+                        <div class="cell" data-index="4"></div>
+                        <div class="cell" data-index="5"></div>
+                        <div class="cell" data-index="6"></div>
+                        <div class="cell" data-index="7"></div>
+                        <div class="cell" data-index="8"></div>
+                    </div>
+                    <div class="status" id="status">Waiting for a player...</div>
+                    <button id="restartBtn">Restart Game</button>
+                </div>
             </div>
         </div>
 
         <div class="bottom-section">
-            <div class="game-section">
-                <h3>Tic-Tac-Toe</h3>
-                <div class="board" id="board">
-                    <div class="cell" data-index="0"></div>
-                    <div class="cell" data-index="1"></div>
-                    <div class="cell" data-index="2"></div>
-                    <div class="cell" data-index="3"></div>
-                    <div class="cell" data-index="4"></div>
-                    <div class="cell" data-index="5"></div>
-                    <div class="cell" data-index="6"></div>
-                    <div class="cell" data-index="7"></div>
-                    <div class="cell" data-index="8"></div>
+            <div class="youtube-section">
+                <h3>Music Player</h3>
+                <div id="youtube-player"></div>
+                <div class="youtube-controls">
+                    <input type="text" id="youtubeInput" placeholder="Paste YouTube video URL here...">
+                    <button id="loadBtn">Load</button>
                 </div>
-                <div class="status" id="status">Waiting for a player...</div>
-                <button id="restartBtn">Restart Game</button>
             </div>
-
-            <div class="extra-content">
-                <div class="youtube-section">
-                    <h3>Music Player</h3>
-                    <div id="youtube-player"></div>
-                    <div class="youtube-controls">
-                        <input type="text" id="youtubeInput" placeholder="Paste YouTube video URL here...">
-                        <button id="loadBtn">Load</button>
-                    </div>
-                </div>
-                <div class="chat-section">
-                    <h3>Chat</h3>
-                    <div id="chatMessages"></div>
-                    <div class="chat-input-container">
-                        <input type="text" id="chatInput" placeholder="Type a message...">
-                        <button id="sendBtn">Send</button>
-                    </div>
+            <div class="chat-section">
+                <h3>Chat</h3>
+                <div id="chatMessages"></div>
+                <div class="chat-input-container">
+                    <input type="text" id="chatInput" placeholder="Type a message...">
+                    <button id="sendBtn">Send</button>
                 </div>
             </div>
         </div>
