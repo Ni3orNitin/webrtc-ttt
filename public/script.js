@@ -1,5 +1,5 @@
 // ==========================
-// ➡️ Final Consolidated script.js (without YouTube Sync)
+// ➡️ Final Consolidated script.js (with YouTube Sync FIX)
 // ==========================
 
 // ==========================
@@ -32,6 +32,7 @@ let currentPlayer = "X";
 let gameActive = true;
 let gameState = Array(9).fill("");
 let player; // For YouTube API
+let isSyncing = false; // FIX: Sync flag
 
 const iceServers = {
   iceServers: [
@@ -141,6 +142,15 @@ async function joinCall() {
                     chatMessages.appendChild(p);
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                     break;
+                case 'youtube_state':
+                    // FIX: Set the sync flag before handling state changes
+                    isSyncing = true;
+                    handleYouTubeState(data.state, data.currentTime);
+                    break;
+                case 'youtube_video':
+                    isSyncing = true;
+                    handleYouTubeVideo(data.videoId);
+                    break;
             }
         };
 
@@ -243,7 +253,10 @@ window.onYouTubeIframeAPIReady = function() {
         width: '640',
         videoId: '',
         playerVars: { 'playsinline': 1 },
-        events: { 'onReady': onPlayerReady }
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+        }
     });
 };
 
@@ -256,11 +269,55 @@ function onPlayerReady(event) {
     });
 }
 
+function onPlayerStateChange(event) {
+    // FIX: Only send a message if the state change was from a user action
+    // and not from a received sync message.
+    if (!isSyncing && signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+        signalingSocket.send(JSON.stringify({
+            type: 'youtube_state',
+            state: event.data,
+            currentTime: player.getCurrentTime()
+        }));
+    }
+    // Reset the flag after a short delay
+    if (isSyncing) {
+        setTimeout(() => isSyncing = false, 500);
+    }
+}
+
+function handleYouTubeState(state, currentTime) {
+    // FIX: Sync the local player and then set the flag to false
+    switch (state) {
+        case YT.PlayerState.PLAYING:
+            player.seekTo(currentTime);
+            player.playVideo();
+            break;
+        case YT.PlayerState.PAUSED:
+        case YT.PlayerState.BUFFERING:
+            player.pauseVideo();
+            break;
+    }
+    // isSyncing = false;
+}
+
+function handleYouTubeVideo(videoId) {
+    // FIX: Receive a new video ID and load it
+    if (player) {
+        player.loadVideoById(videoId);
+    }
+}
+
 function handleYouTubeLoad() {
     const url = youtubeInput.value;
     const videoId = getYouTubeVideoId(url);
     if (videoId && player) {
         player.loadVideoById(videoId);
+        if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+            signalingSocket.send(JSON.stringify({
+                type: 'youtube_video',
+                videoId: videoId
+            }));
+        }
     } else {
         alert("Please enter a valid YouTube URL.");
     }
