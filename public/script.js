@@ -1,5 +1,5 @@
 // ==========================
-// ➡️ Final Consolidated script.js (with YouTube Sync FIX)
+// ➡️ Final Consolidated script.js (YouTube Change Fix)
 // ==========================
 
 // ==========================
@@ -32,7 +32,7 @@ let currentPlayer = "X";
 let gameActive = true;
 let gameState = Array(9).fill("");
 let player; // For YouTube API
-let isSyncing = false; // FIX: Sync flag
+let isSyncing = false; // FIX: Sync flag to prevent feedback loop
 
 const iceServers = {
   iceServers: [
@@ -142,13 +142,12 @@ async function joinCall() {
                     chatMessages.appendChild(p);
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                     break;
+                // FIX: New message types for YouTube sync
                 case 'youtube_state':
-                    // FIX: Set the sync flag before handling state changes
-                    isSyncing = true;
                     handleYouTubeState(data.state, data.currentTime);
                     break;
                 case 'youtube_video':
-                    isSyncing = true;
+                    // FIX: This case now correctly handles video changes
                     handleYouTubeVideo(data.videoId);
                     break;
             }
@@ -287,6 +286,7 @@ function onPlayerStateChange(event) {
 
 function handleYouTubeState(state, currentTime) {
     // FIX: Sync the local player and then set the flag to false
+    isSyncing = true;
     switch (state) {
         case YT.PlayerState.PLAYING:
             player.seekTo(currentTime);
@@ -302,6 +302,7 @@ function handleYouTubeState(state, currentTime) {
 
 function handleYouTubeVideo(videoId) {
     // FIX: Receive a new video ID and load it
+    isSyncing = true;
     if (player) {
         player.loadVideoById(videoId);
     }
