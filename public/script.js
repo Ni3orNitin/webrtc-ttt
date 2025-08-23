@@ -251,3 +251,50 @@ sendBtn.addEventListener("click", () => {
   signalingSocket.send(JSON.stringify({ type: "chat", message: msg }));
   chatInput.value = "";
 });
+
+
+// Add this code block to the end of your script.js file.
+
+// ==========================
+// 🎵 YouTube Music Player
+// ==========================
+let player;
+const youtubeInput = document.getElementById("youtubeInput");
+const loadBtn = document.getElementById("loadBtn");
+
+// 1. Asynchronously load the YouTube IFrame Player API code.
+const tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+const firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+// 2. The API will call this function when the API code downloads.
+window.onYouTubeIframeAPIReady = function() {
+    // Create the video player after the API is ready
+    player = new YT.Player('youtube-player', {
+        height: '390',
+        width: '640',
+        videoId: 'dQw4w9WgXcQ', // Default video ID
+        playerVars: {
+            'playsinline': 1
+        },
+    });
+};
+
+// 3. Function to extract the YouTube video ID from a URL
+function getYouTubeVideoId(url) {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+}
+
+// 4. Load video when the button is clicked
+loadBtn.addEventListener('click', () => {
+    const url = youtubeInput.value;
+    const videoId = getYouTubeVideoId(url);
+    if (videoId && player) {
+        player.loadVideoById(videoId);
+    } else {
+        alert("Please enter a valid YouTube URL.");
+    }
+});

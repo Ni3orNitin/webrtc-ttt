@@ -181,3 +181,49 @@ video {
 #sendBtn:hover {
     background-color: #02a899;
 }
+
+
+/* Add this to your style.css */
+.youtube-section {
+    background: #1e1e1e;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 450px;
+    margin-top: 20px;
+}
+
+.youtube-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+#youtubeInput {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #333;
+    color: #e0e0e0;
+}
+
+#loadBtn {
+    padding: 10px 20px;
+    background-color: #ff5722; /* A new color to distinguish */
+    color: #121212;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+#loadBtn:hover {
+    background-color: #e64a19;
+}
+
+#youtube-player {
+    width: 100%;
+    aspect-ratio: 16 / 9; /* Ensures the player is a standard video size */
+}
