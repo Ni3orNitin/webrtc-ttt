@@ -1,5 +1,5 @@
 // ==========================
-// ➡️ Final Consolidated script.js (YouTube Change Fix)
+// ➡️ Final Consolidated script.js
 // ==========================
 
 // ==========================
@@ -32,7 +32,7 @@ let currentPlayer = "X";
 let gameActive = true;
 let gameState = Array(9).fill("");
 let player; // For YouTube API
-let isSyncing = false; // FIX: Sync flag to prevent feedback loop
+let isSyncing = false;
 
 const iceServers = {
   iceServers: [
@@ -142,12 +142,12 @@ async function joinCall() {
                     chatMessages.appendChild(p);
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                     break;
-                // FIX: New message types for YouTube sync
                 case 'youtube_state':
+                    isSyncing = true;
                     handleYouTubeState(data.state, data.currentTime);
                     break;
                 case 'youtube_video':
-                    // FIX: This case now correctly handles video changes
+                    isSyncing = true;
                     handleYouTubeVideo(data.videoId);
                     break;
             }
@@ -269,8 +269,6 @@ function onPlayerReady(event) {
 }
 
 function onPlayerStateChange(event) {
-    // FIX: Only send a message if the state change was from a user action
-    // and not from a received sync message.
     if (!isSyncing && signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
         signalingSocket.send(JSON.stringify({
             type: 'youtube_state',
@@ -278,14 +276,12 @@ function onPlayerStateChange(event) {
             currentTime: player.getCurrentTime()
         }));
     }
-    // Reset the flag after a short delay
     if (isSyncing) {
         setTimeout(() => isSyncing = false, 500);
     }
 }
 
 function handleYouTubeState(state, currentTime) {
-    // FIX: Sync the local player and then set the flag to false
     isSyncing = true;
     switch (state) {
         case YT.PlayerState.PLAYING:
@@ -297,11 +293,9 @@ function handleYouTubeState(state, currentTime) {
             player.pauseVideo();
             break;
     }
-    // isSyncing = false;
 }
 
 function handleYouTubeVideo(videoId) {
-    // FIX: Receive a new video ID and load it
     isSyncing = true;
     if (player) {
         player.loadVideoById(videoId);
