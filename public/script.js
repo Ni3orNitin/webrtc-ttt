@@ -1,5 +1,5 @@
 // ==========================
-// ➡️ Final Consolidated script.js
+// ➡️ Final Consolidated script.js (YouTube Change Fix)
 // ==========================
 
 // ==========================
@@ -32,7 +32,7 @@ let currentPlayer = "X";
 let gameActive = true;
 let gameState = Array(9).fill("");
 let player; // For YouTube API
-let isSyncing = false;
+let isSyncing = false; // Sync flag to prevent feedback loop
 
 const iceServers = {
   iceServers: [
@@ -270,11 +270,13 @@ function onPlayerReady(event) {
 
 function onPlayerStateChange(event) {
     if (!isSyncing && signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-        signalingSocket.send(JSON.stringify({
-            type: 'youtube_state',
-            state: event.data,
-            currentTime: player.getCurrentTime()
-        }));
+        if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED) {
+            signalingSocket.send(JSON.stringify({
+                type: 'youtube_state',
+                state: event.data,
+                currentTime: player.getCurrentTime()
+            }));
+        }
     }
     if (isSyncing) {
         setTimeout(() => isSyncing = false, 500);
