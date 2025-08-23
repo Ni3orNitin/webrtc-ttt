@@ -1,19 +1,38 @@
 // ==========================
-// 🎥 WebRTC Video Call Setup
+// ➡️ Final Consolidated script.js
+// ==========================
+
+// ==========================
+// DOM Elements and Constants
 // ==========================
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
-const joinBtn = document.getElementById("joinBtn"); // Get the new button
+const joinBtn = document.getElementById("joinBtn");
+const muteMicBtn = document.getElementById("muteMicBtn");
+const muteSpeakerBtn = document.getElementById("muteSpeakerBtn");
+const board = document.querySelectorAll(".cell");
+const statusText = document.getElementById("status");
+const restartBtn = document.getElementById("restartBtn");
+const chatInput = document.getElementById("chatInput");
+const sendBtn = document.getElementById("sendBtn");
+const chatMessages = document.getElementById("chatMessages");
+const youtubeInput = document.getElementById("youtubeInput");
+const loadBtn = document.getElementById("loadBtn");
 
 // NOTE: You MUST replace this URL with the one from your Render deployment.
-// It should look like "wss://your-app-name.onrender.com".
 const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
 
 let localStream;
 let peerConnection;
 let isInitiator = false;
-
 let signalingSocket;
+
+// WebRTC and Game State
+let currentPlayer = "X";
+let gameActive = true;
+let gameState = Array(9).fill("");
+let player; // For YouTube API
+
 const iceServers = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -21,20 +40,27 @@ const iceServers = {
   ]
 };
 
-// Start the local camera and get the stream
+const winningConditions = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8],
+  [0, 3, 6], [1, 4, 7], [2, 5, 8],
+  [0, 4, 8], [2, 4, 6]
+];
+
+// ==========================
+// 🎥 WebRTC Video Call Logic
+// ==========================
 async function startLocalStream() {
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localVideo.srcObject = localStream;
         console.log("✅ Local camera started.");
-        return localStream; // Return the stream for use in other functions
+        return localStream;
     } catch (err) {
         console.error("❌ Failed to get local media stream:", err);
-        throw err; // Rethrow the error to stop execution
+        throw err;
     }
 }
 
-// Set up the WebRTC Peer Connection
 async function createPeerConnection() {
     if (peerConnection) return;
     peerConnection = new RTCPeerConnection(iceServers);
@@ -58,7 +84,6 @@ async function createPeerConnection() {
     };
 }
 
-// Main function to start the call
 async function startCall(initiator) {
     isInitiator = initiator;
     await createPeerConnection();
@@ -73,27 +98,21 @@ async function startCall(initiator) {
 
 async function joinCall() {
     try {
-        // FIX: Start local stream and wait for it to be ready before connecting
         await startLocalStream();
-        
-        // Connect to the signaling server only when the user joins
         signalingSocket = new WebSocket(signalingServerUrl);
         
         signalingSocket.onopen = () => {
              console.log("✅ Connected to signaling server.");
-             // Signal readiness to the server to begin the handshake
              signalingSocket.send(JSON.stringify({ type: 'client_ready' }));
         };
 
         signalingSocket.onmessage = async (message) => {
             const data = JSON.parse(message.data);
-            
             switch (data.type) {
                 case 'peer_connected':
                     console.log("➡️ Another peer is available, starting call.");
                     startCall(true);
                     break;
-
                 case 'offer':
                     console.log("⬅️ Received offer.");
                     startCall(false);
@@ -102,31 +121,20 @@ async function joinCall() {
                     await peerConnection.setLocalDescription(answer);
                     signalingSocket.send(JSON.stringify({ type: 'answer', answer: answer }));
                     break;
-
                 case 'answer':
                     console.log("⬅️ Received answer.");
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
                     break;
-                    
                 case 'candidate':
                     if (data.candidate) {
                         try {
                             await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
                             console.log("⬅️ Added ICE candidate.");
-                        } catch (err) {
-                            console.error("❌ Error adding received ICE candidate:", err);
-                        }
+                        } catch (err) { console.error("❌ Error adding received ICE candidate:", err); }
                     }
                     break;
-
-                case 'move':
-                    updateBoard(data.cell, data.player);
-                    break;
-                
-                case 'restart':
-                    resetGame();
-                    break;
-
+                case 'move': updateBoard(data.cell, data.player); break;
+                case 'restart': resetGame(); break;
                 case 'chat':
                     const p = document.createElement("p");
                     p.textContent = `Friend: ${data.message}`;
@@ -136,50 +144,23 @@ async function joinCall() {
             }
         };
 
-        // Disable the button after click to prevent multiple connections
         joinBtn.disabled = true;
         joinBtn.textContent = 'Connecting...';
     } catch (err) {
-        // Handle the error from startLocalStream, which means no camera access
         console.error("❌ Could not join call:", err);
     }
 }
 
-// Add event listener to the new button
-joinBtn.addEventListener('click', joinCall);
-
-// The rest of the game and chat logic remains the same
-// ...
-
 // ==========================
 // 🎮 Tic Tac Toe Game Logic
 // ==========================
-const board = document.querySelectorAll(".cell");
-const statusText = document.getElementById("status");
-const restartBtn = document.getElementById("restartBtn");
-
-let currentPlayer = "X";
-let gameActive = true;
-let gameState = Array(9).fill("");
-
-const winningConditions = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8],
-  [0, 3, 6], [1, 4, 7], [2, 5, 8],
-  [0, 4, 8], [2, 4, 6]
-];
-
 function handleCellClick(e) {
   const cell = e.target;
   const index = cell.getAttribute("data-index");
-
-  if (gameState[index] !== "" || !gameActive || currentPlayer !== (isInitiator ? "X" : "O")) {
-    return;
-  }
-
+  if (gameState[index] !== "" || !gameActive || currentPlayer !== (isInitiator ? "X" : "O")) return;
   gameState[index] = currentPlayer;
   cell.textContent = currentPlayer;
   cell.classList.add("taken");
-
   signalingSocket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer }));
   checkWinnerAndSwitchTurn();
 }
@@ -200,7 +181,6 @@ function checkWinnerAndSwitchTurn() {
       break;
     }
   }
-
   if (roundWon) {
     statusText.textContent = `🎉 Player ${currentPlayer} Wins!`;
     gameActive = false;
@@ -229,67 +209,56 @@ function resetGame() {
   });
 }
 
-board.forEach(cell => cell.addEventListener("click", handleCellClick));
-restartBtn.addEventListener("click", restartGame);
-
 // ==========================
 // 💬 Simple Chat
 // ==========================
-const chatInput = document.getElementById("chatInput");
-const sendBtn = document.getElementById("sendBtn");
-const chatMessages = document.getElementById("chatMessages");
-
-sendBtn.addEventListener("click", () => {
+function handleChatSend() {
   const msg = chatInput.value.trim();
   if (!msg) return;
-
   const p = document.createElement("p");
   p.textContent = `You: ${msg}`;
   chatMessages.appendChild(p);
   chatMessages.scrollTop = chatMessages.scrollHeight;
-
   signalingSocket.send(JSON.stringify({ type: "chat", message: msg }));
   chatInput.value = "";
-});
-
-
-// Add this code block to the end of your script.js file.
+}
 
 // ==========================
 // 🎵 YouTube Music Player
 // ==========================
-let player;
-const youtubeInput = document.getElementById("youtubeInput");
-const loadBtn = document.getElementById("loadBtn");
-
-// 1. Asynchronously load the YouTube IFrame Player API code.
-const tag = document.createElement('script');
-tag.src = "https://www.youtube.com/iframe_api";
-const firstScriptTag = document.getElementsByTagName('script')[0];
-firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-// 2. The API will call this function when the API code downloads.
-window.onYouTubeIframeAPIReady = function() {
-    // Create the video player after the API is ready
-    player = new YT.Player('youtube-player', {
-        height: '390',
-        width: '640',
-        videoId: 'dQw4w9WgXcQ', // Default video ID
-        playerVars: {
-            'playsinline': 1
-        },
-    });
-};
-
-// 3. Function to extract the YouTube video ID from a URL
 function getYouTubeVideoId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
 }
 
-// 4. Load video when the button is clicked
-loadBtn.addEventListener('click', () => {
+// Asynchronously load the YouTube IFrame Player API code.
+const tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+const firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+window.onYouTubeIframeAPIReady = function() {
+    player = new YT.Player('youtube-player', {
+        height: '390',
+        width: '640',
+        videoId: '',
+        playerVars: { 'playsinline': 1 },
+        events: { 'onReady': onPlayerReady }
+    });
+};
+
+function onPlayerReady(event) {
+    // FIX: Use your playlist ID here
+    event.target.loadPlaylist({
+        list: 'PLIlng4MI3pW-5OQE84UnfPGJLf_of-91Y',
+        listType: 'playlist',
+        index: 0,
+        startSeconds: 0
+    });
+}
+
+function handleYouTubeLoad() {
     const url = youtubeInput.value;
     const videoId = getYouTubeVideoId(url);
     if (videoId && player) {
@@ -297,16 +266,12 @@ loadBtn.addEventListener('click', () => {
     } else {
         alert("Please enter a valid YouTube URL.");
     }
-});
+}
 
-
-// Add these lines near the top of your script.js file, along with your other const declarations
-const muteMicBtn = document.getElementById("muteMicBtn");
-const muteSpeakerBtn = document.getElementById("muteSpeakerBtn");
-
-// Add these event listeners after your other button listeners, for example, after joinBtn.addEventListener('click', joinCall);
-
-// Mic Mute Button Logic
+// ==========================
+// ⚙️ Event Listeners
+// ==========================
+joinBtn.addEventListener('click', joinCall);
 muteMicBtn.addEventListener('click', () => {
     if (!localStream) return;
     const audioTrack = localStream.getAudioTracks()[0];
@@ -322,7 +287,6 @@ muteMicBtn.addEventListener('click', () => {
     }
 });
 
-// Speaker Mute Button Logic
 muteSpeakerBtn.addEventListener('click', () => {
     if (!remoteVideo || !remoteVideo.srcObject) return;
     const remoteStream = remoteVideo.srcObject;
@@ -338,64 +302,7 @@ muteSpeakerBtn.addEventListener('click', () => {
         }
     }
 });
-
-
-// Add this code block to the end of your script.js file.
-
-// ==========================
-// 🎵 YouTube Music Player
-// ==========================
-let player;
-const youtubeInput = document.getElementById("youtubeInput");
-const loadBtn = document.getElementById("loadBtn");
-
-// 1. Asynchronously load the YouTube IFrame Player API code.
-const tag = document.createElement('script');
-tag.src = "https://www.youtube.com/iframe_api";
-const firstScriptTag = document.getElementsByTagName('script')[0];
-firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-// 2. The API will call this function when the API code downloads.
-window.onYouTubeIframeAPIReady = function() {
-    // Create the video player after the API is ready
-    player = new YT.Player('youtube-player', {
-        height: '390',
-        width: '640',
-        videoId: '', // No video ID needed here
-        playerVars: {
-            'playsinline': 1
-        },
-        events: {
-            'onReady': onPlayerReady // This event will trigger playlist loading
-        }
-    });
-};
-
-function onPlayerReady(event) {
-    // 3. Load the playlist when the player is ready
-    // This is the corrected line with only the playlist ID
-    event.target.loadPlaylist({
-        list: 'PLIlng4MI3pW-5OQE84UnfPGJLf_of-91Y',
-        listType: 'playlist',
-        index: 0,
-        startSeconds: 0
-    });
-}
-
-// 4. Function to extract the YouTube video ID from a URL (this is still useful for single videos)
-function getYouTubeVideoId(url) {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-}
-
-// 5. Load video when the button is clicked
-loadBtn.addEventListener('click', () => {
-    const url = youtubeInput.value;
-    const videoId = getYouTubeVideoId(url);
-    if (videoId && player) {
-        player.loadVideoById(videoId);
-    } else {
-        alert("Please enter a valid YouTube URL.");
-    }
-});
+board.forEach(cell => cell.addEventListener("click", handleCellClick));
+restartBtn.addEventListener("click", restartGame);
+sendBtn.addEventListener("click", handleChatSend);
+loadBtn.addEventListener('click', handleYouTubeLoad);
