@@ -612,7 +612,6 @@ muteSpeakerBtn.addEventListener('click', () => {
         }
     }
 });
-
 endCallBtn.addEventListener('click', endCall);
 restartBtn.addEventListener('click', handleRestartBtnClick);
 hangmanRestartBtn.addEventListener('click', handleRestartBtnClick);
@@ -631,3 +630,36 @@ hangmanBtn.addEventListener('click', () => {
 
 ticTacToeBoard.forEach(cell => cell.addEventListener("click", handleTicTacToeClick));
 updateScoreDisplay();
+
+// Add these lines near the top of your script.js file
+const guessInput = document.getElementById("guessInput");
+const guessBtn = document.getElementById("guessBtn");
+
+
+// Update handleChatSend to remove Hangman guess logic since it's now handled by the new buttons
+function handleChatSend() {
+  const msg = chatInput.value.trim();
+  if (!msg) return;
+  
+  const p = document.createElement("p");
+  p.textContent = `You: ${msg}`;
+  chatMessages.appendChild(p);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+      signalingSocket.send(JSON.stringify({ type: "chat", message: msg }));
+  }
+  
+  chatInput.value = "";
+}
+
+// Add this new event listener
+guessBtn.addEventListener('click', () => {
+    const guess = guessInput.value.trim();
+    if (currentGame === 'hangman' && gameActive && guess.length === 1 && /^[a-zA-Z]$/.test(guess) && currentPlayer === (isInitiator ? "X" : "O")) {
+        if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+            signalingSocket.send(JSON.stringify({ type: 'hangman_guess', letter: guess, player: currentPlayer }));
+            handleHangmanGuess(guess, currentPlayer);
+        }
+    }
+    guessInput.value = '';
+});

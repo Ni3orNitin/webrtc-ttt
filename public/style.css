@@ -23,54 +23,21 @@ h1, h3 {
     text-align: center;
 }
 
-.main-grid-layout {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    grid-template-rows: auto 1fr;
+.main-layout {
+    display: flex;
     gap: 20px;
-    height: calc(100vh - 100px);
 }
 
-/* Common box styles */
-.video-section, .game-hub, .youtube-section, .chat-section {
-    background-color: #1e1e1e;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+.left-column {
     display: flex;
     flex-direction: column;
-    align-items: center;
-}
-
-.video-section {
-    grid-column: 1 / 2;
-    grid-row: 1 / 2;
     gap: 20px;
-}
-
-.game-hub {
-    grid-column: 2 / 3;
-    grid-row: 1 / 2;
-    text-align: center;
-    justify-content: flex-start;
-}
-
-.youtube-section {
-    grid-column: 1 / 2;
-    grid-row: 2 / 3;
-}
-
-.chat-section {
-    grid-column: 2 / 3;
-    grid-row: 2 / 3;
-    height: 100%;
+    flex: 1;
 }
 
 .video-container {
     display: flex;
     gap: 20px;
-    width: 100%;
-    justify-content: center;
 }
 
 .video-box {
@@ -95,17 +62,30 @@ video {
     color: #a0a0a0;
 }
 
-.controls-area, .game-selector {
+.right-column {
+    flex: 1;
+}
+
+.game-hub {
+    background-color: #1e1e1e;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.game-selector {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     gap: 10px;
     justify-content: center;
     align-items: center;
-    margin-top: 10px;
+    margin-bottom: 20px;
 }
 
-.controls-area button, .game-selector button {
+.game-selector button {
     padding: 10px 20px;
     border: none;
     border-radius: 8px;
@@ -116,29 +96,32 @@ video {
     transition: background-color 0.2s ease;
 }
 
-.controls-area button:hover, .game-selector button:hover {
+.game-selector button:hover {
     background-color: #3700b3;
 }
 
-.controls-area button.active, .game-selector button.active {
+.game-selector button.active {
     background-color: #b00020;
     color: #fff;
 }
 
+.games-container {
+    margin-top: 20px;
+}
+
 .game-section {
     width: 100%;
-}
-
-.game-selector {
-    margin-bottom: 20px;
-}
-
-.game-content {
-    width: 100%;
+    background-color: #1e1e1e;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+}
+
+.game-section h3 {
+    margin-bottom: 10px;
 }
 
 /* Hangman Styles */
@@ -162,6 +145,36 @@ video {
     font-size: 1rem;
     color: #a0a0a0;
     margin-bottom: 15px;
+}
+
+.hangman-input {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    justify-content: center;
+    align-items: center;
+}
+
+.hangman-input input {
+    width: 50px;
+    text-align: center;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    padding: 8px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #333;
+    color: #e0e0e0;
+}
+
+.hangman-input button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    background-color: #03dac6;
+    color: #121212;
 }
 
 /* Tic-Tac-Toe Board */
@@ -197,7 +210,7 @@ video {
     color: #888;
 }
 
-.game-content .status {
+.game-section .status {
     font-size: 1.2rem;
     font-weight: bold;
     margin: 10px 0;
@@ -205,7 +218,7 @@ video {
     color: #03dac6;
 }
 
-.game-content button {
+.game-section button {
     padding: 12px;
     background-color: #bb86fc;
     color: #121212;
@@ -217,15 +230,24 @@ video {
     margin-top: 15px;
 }
 
-.game-content button:hover {
+.game-section button:hover {
     background-color: #a578e8;
+}
+
+.bottom-section {
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.youtube-section, .chat-section {
+    flex: 1;
 }
 
 .youtube-controls {
     display: flex;
     gap: 10px;
     margin-top: 15px;
-    width: 100%;
 }
 
 #youtubeInput {
@@ -269,7 +291,6 @@ video {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    width: 100%;
 }
 
 .chat-input-container {
@@ -304,16 +325,19 @@ video {
     display: none;
 }
 
-/* FIX: Mobile Responsiveness */
+/* Mobile Responsiveness */
 @media (max-width: 767px) {
-    .main-grid-layout {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto;
+    .container {
+        padding: 10px;
     }
     
-    .video-section, .game-hub, .youtube-section, .chat-section {
-        grid-column: 1 / 2;
-        grid-row: auto;
+    .main-layout {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .left-column, .right-column {
+        width: 100%;
     }
     
     .video-container {
@@ -324,7 +348,19 @@ video {
         width: 100%;
     }
     
-    .controls-area {
+    .controls-area, .game-selector, .hangman-input, .chat-input-container {
         flex-direction: column;
+        gap: 10px;
+        width: 100%;
+        max-width: none;
+    }
+    
+    .controls-area button, .game-selector button, .hangman-input input, .hangman-input button {
+        flex: 1;
+    }
+    
+    .game-section, .youtube-section, .chat-section, .game-hub {
+        width: 100%;
+        max-width: none;
     }
 }
