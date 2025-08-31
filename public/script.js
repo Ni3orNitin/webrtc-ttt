@@ -7,6 +7,10 @@
 // ==========================
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
+const joinBtn = document.getElementById("joinBtn");
+const muteMicBtn = document.getElementById("muteMicBtn");
+const muteSpeakerBtn = document.getElementById("muteSpeakerBtn");
+const endCallBtn = document.getElementById("endCallBtn");
 
 // NOTE: You MUST replace this URL with the one from your Render deployment.
 const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
@@ -50,7 +54,7 @@ async function createPeerConnection() {
 
     peerConnection.ontrack = (event) => {
         if (event.streams && event.streams.length > 0) {
-            remoteVideo.srcObject = event.streams [0];
+            remoteVideo.srcObject = event.streams[0];
             console.log("✅ Remote stream received.");
         }
     };
@@ -75,7 +79,7 @@ async function startCall(initiator) {
     }
 }
 
-async function connectToSignaling() {
+async function joinCall() {
     try {
         await startLocalStream();
         signalingSocket = new WebSocket(signalingServerUrl);
@@ -118,8 +122,11 @@ async function connectToSignaling() {
                     break;
             }
         };
+
+        joinBtn.disabled = true;
+        joinBtn.textContent = 'Connecting...';
     } catch (err) {
-        console.error("❌ Could not connect to signaling:", err);
+        console.error("❌ Could not join call:", err);
     }
 }
 
@@ -136,13 +143,48 @@ async function endCall() {
     }
 
     remoteVideo.srcObject = null;
+
+    joinBtn.disabled = false;
+    joinBtn.textContent = 'Join Call';
+    isInitiator = false;
     console.log("❌ Call ended.");
 
     if (signalingSocket) {
+        signalingSocket.send(JSON.stringify({ type: 'end_call' }));
         signalingSocket.close();
         signalingSocket = null;
     }
 }
 
-// FIX: Automatically connect when the page loads
-window.addEventListener('load', connectToSignaling);
+joinBtn.addEventListener('click', joinCall);
+muteMicBtn.addEventListener('click', () => {
+    if (!localStream) return;
+    const audioTrack = localStream.getAudioTracks()[0];
+    if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        if (!audioTrack.enabled) {
+            muteMicBtn.textContent = 'Unmute Mic';
+            muteMicBtn.classList.add('active');
+        } else {
+            muteMicBtn.textContent = 'Mute Mic';
+            muteMicBtn.classList.remove('active');
+        }
+    }
+});
+
+muteSpeakerBtn.addEventListener('click', () => {
+    if (!remoteVideo || !remoteVideo.srcObject) return;
+    const remoteStream = remoteVideo.srcObject;
+    const audioTrack = remoteStream.getAudioTracks()[0];
+    if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        if (!audioTrack.enabled) {
+            muteSpeakerBtn.textContent = 'Unmute Speaker';
+            muteSpeakerBtn.classList.add('active');
+        } else {
+            muteSpeakerBtn.textContent = 'Mute Speaker';
+            muteSpeakerBtn.classList.remove('active');
+        }
+    }
+});
+endCallBtn.addEventListener('click', endCall);

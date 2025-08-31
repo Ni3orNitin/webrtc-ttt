@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Word Guessing Game</title>
+    <link rel="stylesheet" href="guess.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="guess.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container">
+        <h1 class="text-4xl font-bold mb-4 text-gray-800">Word Guessing Game</h1>
+        <p class="message-display text-green-600 font-semibold" id="message">Loading a new word...</p>
+        <div class="word-display" id="wordDisplay"></div>
+        <div class="turns-display" id="turnsDisplay"></div>
+
+        <div class="input-group">
+            <input type="text" id="guessInput" maxlength="1" class="focus:border-blue-500" placeholder="Guess a letter">
+            <button id="guessBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Guess</button>
+        </div>
+        
+        <div id="hintDisplay" class="mt-4 text-sm text-gray-700"></div>
+        <button id="getHintBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition-colors mt-4">Get a Hint</button>
+
+        <p class="used-letters text-gray-500 text-sm mt-4" id="usedLetters"></p>
+        <button class="restart-btn" id="restartBtn">Restart Game</button>
+    </div>
+</body>
+</html>
