@@ -45,39 +45,21 @@
 
             <div class="right-column">
                 <div class="game-hub">
-                    <div class="game-selector">
-                        <button id="ticTacToeBtn">Tic-Tac-Toe</button>
-                        <button id="hangmanBtn">Hangman</button>
-                    </div>
-                    <div class="games-container">
-                        <div class="game-section" id="ticTacToeGame">
-                            <h3>Tic-Tac-Toe</h3>
-                            <div class="board" id="board">
-                                <div class="cell" data-index="0"></div>
-                                <div class="cell" data-index="1"></div>
-                                <div class="cell" data-index="2"></div>
-                                <div class="cell" data-index="3"></div>
-                                <div class="cell" data-index="4"></div>
-                                <div class="cell" data-index="5"></div>
-                                <div class="cell" data-index="6"></div>
-                                <div class="cell" data-index="7"></div>
-                                <div class="cell" data-index="8"></div>
-                            </div>
-                            <div class="status" id="status">Waiting for a player...</div>
-                            <button id="restartBtn">Restart Game</button>
+                    <div class="game-section" id="ticTacToeGame">
+                        <h3>Tic-Tac-Toe</h3>
+                        <div class="board" id="board">
+                            <div class="cell" data-index="0"></div>
+                            <div class="cell" data-index="1"></div>
+                            <div class="cell" data-index="2"></div>
+                            <div class="cell" data-index="3"></div>
+                            <div class="cell" data-index="4"></div>
+                            <div class="cell" data-index="5"></div>
+                            <div class="cell" data-index="6"></div>
+                            <div class="cell" data-index="7"></div>
+                            <div class="cell" data-index="8"></div>
                         </div>
-                        <div class="game-section hidden" id="hangmanGame">
-                            <h3>Hangman</h3>
-                            <div class="hangman-display" id="hangmanDisplay"></div>
-                            <div class="word-display" id="wordDisplay"></div>
-                            <div class="used-letters" id="usedLetters"></div>
-                            <div class="status" id="hangmanStatus">Waiting for a player...</div>
-                            <div class="hangman-input">
-                                <input type="text" id="guessInput" maxlength="1" placeholder="Guess a letter">
-                                <button id="guessBtn">Guess</button>
-                            </div>
-                            <button id="hangmanRestartBtn">Restart Game</button>
-                        </div>
+                        <div class="status" id="status">Waiting for a player...</div>
+                        <button id="restartBtn">Restart Game</button>
                     </div>
                 </div>
                 <div class="chat-section">

@@ -12,7 +12,6 @@ const muteMicBtn = document.getElementById("muteMicBtn");
 const muteSpeakerBtn = document.getElementById("muteSpeakerBtn");
 const endCallBtn = document.getElementById("endCallBtn");
 
-const ticTacToeBtn = document.getElementById("ticTacToeBtn");
 const board = document.querySelectorAll(".cell");
 const statusText = document.getElementById("status");
 const restartBtn = document.getElementById("restartBtn");
