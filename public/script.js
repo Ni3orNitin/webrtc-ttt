@@ -12,6 +12,7 @@ const muteMicBtn = document.getElementById("muteMicBtn");
 const muteSpeakerBtn = document.getElementById("muteSpeakerBtn");
 const endCallBtn = document.getElementById("endCallBtn");
 
+const ticTacToeBtn = document.getElementById("ticTacToeBtn");
 const board = document.querySelectorAll(".cell");
 const statusText = document.getElementById("status");
 const restartBtn = document.getElementById("restartBtn");
@@ -23,6 +24,7 @@ const loadBtn = document.getElementById("loadBtn");
 const playerXScoreDisplay = document.getElementById("playerXScore");
 const playerOScoreDisplay = document.getElementById("playerOScore");
 
+// NOTE: You MUST replace this URL with the one from your Render deployment.
 const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
 
 let localStream;
@@ -44,6 +46,16 @@ const ticTacToeWinningConditions = [
   [0, 3, 6], [1, 4, 7], [2, 5, 8],
   [0, 4, 8], [2, 4, 6]
 ];
+
+// FIX: Added more reliable STUN servers for a robust connection
+const iceServers = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" }
+  ]
+};
 
 // ==========================
 // 🎥 WebRTC Video Call Logic
@@ -392,12 +404,8 @@ muteSpeakerBtn.addEventListener('click', () => {
 });
 endCallBtn.addEventListener('click', endCall);
 restartBtn.addEventListener('click', () => {
-    if (isInitiator) {
-        signalingSocket.send(JSON.stringify({ type: 'restart', game: 'tic-tac-toe' }));
-        resetGame('tic-tac-toe');
-    } else {
-        statusText.textContent = "Only the host can restart.";
-    }
+    signalingSocket.send(JSON.stringify({ type: 'restart', game: 'tic-tac-toe' }));
+    resetGame();
 });
 sendBtn.addEventListener("click", handleChatSend);
 loadBtn.addEventListener('click', handleYouTubeLoad);
