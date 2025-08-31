@@ -23,6 +23,8 @@ const wordDisplay = document.getElementById("wordDisplay");
 const usedLettersDisplay = document.getElementById("usedLetters");
 const hangmanStatus = document.getElementById("hangmanStatus");
 const hangmanRestartBtn = document.getElementById("hangmanRestartBtn");
+const guessInput = document.getElementById("guessInput");
+const guessBtn = document.getElementById("guessBtn");
 
 const statusText = document.getElementById("status");
 const restartBtn = document.getElementById("restartBtn");
@@ -136,6 +138,15 @@ const hangmanFigures = [
     `
 ];
 
+// FIX: New list of 50 random words for Hangman
+const hangmanWords = [
+    "APPLE", "BANANA", "CHERRY", "ORANGE", "GRAPE", "LEMON", "KIWI", "MANGO", "PEAR", "PLUM",
+    "FARMER", "DOCTOR", "POLICE", "TEACHER", "CHEF", "PILOT", "ARTIST", "SINGER", "WRITER", "JUDGE",
+    "COW", "HORSE", "SHEEP", "GOAT", "PIG", "DUCK", "CHICKEN", "TURKEY", "ROOSTER", "CAT",
+    "BICYCLE", "CAR", "BUS", "TRAIN", "BOAT", "PLANE", "HELICOPTER", "TRUCK", "SCOOTER", "TAXI",
+    "OCEAN", "MOUNTAIN", "RIVER", "FOREST", "LAKE", "DESERT", "JUNGLE", "ISLAND", "CANYON", "VOLCANO"
+];
+
 // ==========================
 // 🎥 WebRTC Video Call Logic
 // ==========================
@@ -160,8 +171,8 @@ async function createPeerConnection() {
     });
 
     peerConnection.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-            remoteVideo.srcObject = event.streams[0];
+        if (event.streams && event.streams.length > 0) {
+            remoteVideo.srcObject = event.streams [0];
             console.log("✅ Remote stream received.");
         }
     };
@@ -190,10 +201,10 @@ async function joinCall() {
     try {
         await startLocalStream();
         signalingSocket = new WebSocket(signalingServerUrl);
-        
+
         signalingSocket.onopen = () => {
-             console.log("✅ Connected to signaling server.");
-             signalingSocket.send(JSON.stringify({ type: 'client_ready' }));
+            console.log("✅ Connected to signaling server.");
+            signalingSocket.send(JSON.stringify({ type: 'client_ready' }));
         };
 
         signalingSocket.onmessage = async (message) => {
@@ -277,7 +288,7 @@ async function endCall() {
     joinBtn.textContent = 'Join Call';
     isInitiator = false;
     console.log("❌ Call ended.");
-    
+
     if (signalingSocket) {
         signalingSocket.send(JSON.stringify({ type: 'end_call' }));
         signalingSocket.close();
@@ -297,7 +308,9 @@ function switchGame(gameId) {
         statusText.textContent = "Waiting for a player...";
     } else {
         hangmanGame.classList.remove('hidden');
-        hangmanStatus.textContent = "Click 'Restart Game' to start a new round.";
+        hangmanGame.style.display = 'flex'; // Ensure it's displayed as flex for layout
+        ticTacToeGame.style.display = 'none';
+        initializeHangmanUI();
     }
 }
 
@@ -311,7 +324,7 @@ function handleRestartBtnClick() {
         }
     } else {
         if (isInitiator) {
-            let word = prompt("Enter a word for Hangman:");
+            let word = hangmanWords [Math.floor(Math.random() * hangmanWords.length)];
             if (word && signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
                 signalingSocket.send(JSON.stringify({ type: 'hangman_start', word: word, player: "X" }));
                 startHangmanGame(word, "X");
@@ -331,48 +344,48 @@ function updateScoreDisplay() {
 // ➡️ Tic-Tac-Toe Logic
 // ==========================
 function handleTicTacToeClick(e) {
-  const cell = e.target;
-  const index = cell.getAttribute("data-index");
-  if (ticTacToeState[index] !== "" || !gameActive || currentPlayer !== (isInitiator ? "X" : "O")) return;
-  ticTacToeState[index] = currentPlayer;
-  cell.textContent = currentPlayer;
-  cell.classList.add("taken");
-  signalingSocket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer }));
-  checkTicTacToeWinner();
+    const cell = e.target;
+    const index = cell.getAttribute("data-index");
+    if (ticTacToeState [index] !== "" || !gameActive || currentPlayer !== (isInitiator ? "X" : "O")) return;
+    ticTacToeState [index] = currentPlayer;
+    cell.textContent = currentPlayer;
+    cell.classList.add("taken");
+    signalingSocket.send(JSON.stringify({ type: "move", cell: index, player: currentPlayer }));
+    checkTicTacToeWinner();
 }
 
 function updateTicTacToeBoard(index, player) {
-  ticTacToeState[index] = player;
-  ticTacToeBoard[index].textContent = player;
-  ticTacToeBoard[index].classList.add("taken");
-  checkTicTacToeWinner();
+    ticTacToeState [index] = player;
+    ticTacToeBoard [index].textContent = player;
+    ticTacToeBoard [index].classList.add("taken");
+    checkTicTacToeWinner();
 }
 
 function checkTicTacToeWinner() {
-  let roundWon = false;
-  for (let condition of ticTacToeWinningConditions) {
-    const [a, b, c] = condition;
-    if (ticTacToeState[a] && ticTacToeState[a] === ticTacToeState[b] && ticTacToeState[a] === ticTacToeState[c]) {
-      roundWon = true;
-      break;
+    let roundWon = false;
+    for (let condition of ticTacToeWinningConditions [0]) {
+        const [a, b, c] = condition;
+        if (ticTacToeState [a] && ticTacToeState [a] === ticTacToeState [b] && ticTacToeState [a] === ticTacToeState [c]) {
+            roundWon = true;
+            break;
+        }
     }
-  }
-  if (roundWon) {
-    statusText.textContent = `🎉 Player ${currentPlayer} Wins!`;
-    gameActive = false;
-    if (currentPlayer === "X") {
-        scoreX++;
+    if (roundWon) {
+        statusText.textContent = `🎉 Player ${currentPlayer} Wins!`;
+        gameActive = false;
+        if (currentPlayer === "X") {
+            scoreX++;
+        } else {
+            scoreO++;
+        }
+        updateScoreDisplay();
+    } else if (!ticTacToeState.includes("")) {
+        statusText.textContent = "😮 It's a Draw!";
+        gameActive = false;
     } else {
-        scoreO++;
+        currentPlayer = currentPlayer === "X" ? "O" : "X";
+        statusText.textContent = `Player ${currentPlayer}'s Turn`;
     }
-    updateScoreDisplay();
-  } else if (!ticTacToeState.includes("")) {
-    statusText.textContent = "😮 It's a Draw!";
-    gameActive = false;
-  } else {
-    currentPlayer = currentPlayer === "X" ? "O" : "X";
-    statusText.textContent = `Player ${currentPlayer}'s Turn`;
-  }
 }
 
 function resetTicTacToeGame() {
@@ -390,9 +403,10 @@ function resetTicTacToeGame() {
 // ➡️ Hangman Logic
 // ==========================
 function initializeHangmanUI() {
-    hangmanDisplay.textContent = hangmanFigures[0];
-    wordDisplay.textContent = "____";
-    usedLettersDisplay.textContent = "Used Letters: ";
+    hangmanDisplay.textContent = hangmanFigures [0];
+    wordDisplay.textContent = "";
+    usedLettersDisplay.textContent = "";
+    hangmanStatus.textContent = "Click 'Restart Game' to start a new round.";
 }
 
 function startHangmanGame(word, player) {
@@ -417,7 +431,7 @@ function updateHangmanDisplay() {
     }
     wordDisplay.textContent = wordDisplayString.trim();
     usedLettersDisplay.textContent = `Used Letters: ${guessedLetters.join(', ')}`;
-    hangmanDisplay.textContent = hangmanFigures[incorrectGuesses];
+    hangmanDisplay.textContent = hangmanFigures [incorrectGuesses];
 }
 
 function handleHangmanGuess(letter, player) {
@@ -436,6 +450,7 @@ function handleHangmanGuess(letter, player) {
     }
     checkHangmanWinner();
     updateHangmanDisplay();
+    guessInput.value = '';
 }
 
 function checkHangmanWinner() {
@@ -446,7 +461,7 @@ function checkHangmanWinner() {
             break;
         }
     }
-    
+
     if (wordGuessed) {
         hangmanStatus.textContent = `🎉 Player ${currentPlayer} Wins! The word was "${secretWord}"`;
         gameActive = false;
@@ -469,26 +484,38 @@ function checkHangmanWinner() {
 // 💬 Simple Chat (with Hangman guessing)
 // ==========================
 function handleChatSend() {
-  const msg = chatInput.value.trim();
-  if (!msg) return;
-  
-  if (currentGame === 'hangman' && gameActive && msg.length === 1 && /^[a-zA-Z]$/.test(msg) && currentPlayer === (isInitiator ? "X" : "O")) {
-      if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-          signalingSocket.send(JSON.stringify({ type: 'hangman_guess', letter: msg, player: currentPlayer }));
-          handleHangmanGuess(msg, currentPlayer);
-      }
-  } else {
-      const p = document.createElement("p");
-      p.textContent = `You: ${msg}`;
-      chatMessages.appendChild(p);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-      if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-          signalingSocket.send(JSON.stringify({ type: "chat", message: msg }));
-      }
-  }
-  
-  chatInput.value = "";
+    const msg = chatInput.value.trim();
+    if (!msg) return;
+
+    if (currentGame === 'hangman' && gameActive && msg.length === 1 && /^[a-zA-Z]$/.test(msg) && currentPlayer === (isInitiator ? "X" : "O")) {
+        if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+            signalingSocket.send(JSON.stringify({ type: 'hangman_guess', letter: msg, player: currentPlayer }));
+            handleHangmanGuess(msg, currentPlayer);
+        }
+    } else {
+        const p = document.createElement("p");
+        p.textContent = `You: ${msg}`;
+        chatMessages.appendChild(p);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+            signalingSocket.send(JSON.stringify({ type: "chat", message: msg }));
+        }
+    }
+
+    chatInput.value = "";
 }
+
+// Handle guess button click
+guessBtn.addEventListener('click', () => {
+    const guess = guessInput.value.trim();
+    if (currentGame === 'hangman' && gameActive && guess.length === 1 && /^[a-zA-Z]$/.test(guess) && currentPlayer === (isInitiator ? "X" : "O")) {
+        if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+            signalingSocket.send(JSON.stringify({ type: 'hangman_guess', letter: guess, player: currentPlayer }));
+            handleHangmanGuess(guess, currentPlayer);
+        }
+    }
+    guessInput.value = '';
+});
 
 // ==========================
 // 🎵 YouTube Music Player
@@ -496,12 +523,12 @@ function handleChatSend() {
 function getYouTubeVideoId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+    return (match && match [2].length === 11) ? match [2] : null;
 }
 
 const tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
-const firstScriptTag = document.getElementsByTagName('script')[0];
+const firstScriptTag = document.getElementsByTagName('script') [0];
 firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
 window.onYouTubeIframeAPIReady = function() {
@@ -584,7 +611,7 @@ function handleYouTubeLoad() {
 joinBtn.addEventListener('click', joinCall);
 muteMicBtn.addEventListener('click', () => {
     if (!localStream) return;
-    const audioTrack = localStream.getAudioTracks()[0];
+    const audioTrack = localStream.getAudioTracks() [0];
     if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         if (!audioTrack.enabled) {
@@ -600,13 +627,13 @@ muteMicBtn.addEventListener('click', () => {
 muteSpeakerBtn.addEventListener('click', () => {
     if (!remoteVideo || !remoteVideo.srcObject) return;
     const remoteStream = remoteVideo.srcObject;
-    const audioTrack = remoteStream.getAudioTracks()[0];
+    const audioTrack = remoteStream.getAudioTracks() [0];
     if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         if (!audioTrack.enabled) {
             muteSpeakerBtn.textContent = 'Unmute Speaker';
             muteSpeakerBtn.classList.add('active');
-        } else {
+         } else {
             muteSpeakerBtn.textContent = 'Mute Speaker';
             muteSpeakerBtn.classList.remove('active');
         }
@@ -625,41 +652,7 @@ ticTacToeBtn.addEventListener('click', () => {
 hangmanBtn.addEventListener('click', () => {
     switchGame('hangman');
     updateScoreDisplay();
-    initializeHangmanUI();
 });
 
 ticTacToeBoard.forEach(cell => cell.addEventListener("click", handleTicTacToeClick));
 updateScoreDisplay();
-
-// Add these lines near the top of your script.js file
-const guessInput = document.getElementById("guessInput");
-const guessBtn = document.getElementById("guessBtn");
-
-
-// Update handleChatSend to remove Hangman guess logic since it's now handled by the new buttons
-function handleChatSend() {
-  const msg = chatInput.value.trim();
-  if (!msg) return;
-  
-  const p = document.createElement("p");
-  p.textContent = `You: ${msg}`;
-  chatMessages.appendChild(p);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-  if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-      signalingSocket.send(JSON.stringify({ type: "chat", message: msg }));
-  }
-  
-  chatInput.value = "";
-}
-
-// Add this new event listener
-guessBtn.addEventListener('click', () => {
-    const guess = guessInput.value.trim();
-    if (currentGame === 'hangman' && gameActive && guess.length === 1 && /^[a-zA-Z]$/.test(guess) && currentPlayer === (isInitiator ? "X" : "O")) {
-        if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-            signalingSocket.send(JSON.stringify({ type: 'hangman_guess', letter: guess, player: currentPlayer }));
-            handleHangmanGuess(guess, currentPlayer);
-        }
-    }
-    guessInput.value = '';
-});
