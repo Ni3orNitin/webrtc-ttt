@@ -24,7 +24,6 @@ const loadBtn = document.getElementById("loadBtn");
 const playerXScoreDisplay = document.getElementById("playerXScore");
 const playerOScoreDisplay = document.getElementById("playerOScore");
 
-// NOTE: You MUST replace this URL with the one from your Render deployment.
 const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
 
 let localStream;
@@ -46,16 +45,6 @@ const ticTacToeWinningConditions = [
   [0, 3, 6], [1, 4, 7], [2, 5, 8],
   [0, 4, 8], [2, 4, 6]
 ];
-
-// FIX: Added more reliable STUN servers for a robust connection
-const iceServers = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun3.l.google.com:19302" }
-  ]
-};
 
 // ==========================
 // 🎥 WebRTC Video Call Logic

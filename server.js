@@ -7,7 +7,6 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 
-// Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 const server = http.createServer(app);
@@ -18,7 +17,7 @@ let connectedClients = [];
 wss.on("connection", (ws) => {
   console.log("✅ New client connected.");
   connectedClients.push(ws);
-
+  
   if (connectedClients.length === 2) {
     connectedClients[0].send(JSON.stringify({ type: 'peer_connected' }));
   }
@@ -47,14 +46,3 @@ wss.on("connection", (ws) => {
 server.listen(PORT, HOST, () => {
   console.log(`🚀 Server running on http://${HOST}:${PORT}`);
 });
-
-
-// server.js
-// ... (existing code)
-
-// A simple endpoint to keep the server alive
-app.get('/healthz', (req, res) => {
-    res.status(200).send('ok');
-});
-
-// ... (existing code)
