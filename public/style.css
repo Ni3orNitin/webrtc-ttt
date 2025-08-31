@@ -28,7 +28,7 @@ h1, h3 {
     gap: 20px;
 }
 
-.left-column, .right-column {
+.left-column {
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -62,55 +62,8 @@ video {
     color: #a0a0a0;
 }
 
-.controls-area, .game-selector {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-    align-items: center;
-    margin-top: 10px;
-}
-
-.controls-area button, .game-selector button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    background-color: #6200ea;
-    color: #fff;
-    transition: background-color 0.2s ease;
-}
-
-.controls-area button:hover, .game-selector button:hover {
-    background-color: #3700b3;
-}
-
-.controls-area button.active, .game-selector button.active {
-    background-color: #b00020;
-    color: #fff;
-}
-
-.game-status-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 10px;
-}
-
-.score-display-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 15px 30px;
-    background-color: #1e1e1e;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #fff;
-    gap: 10px;
+.right-column {
+    flex: 1;
 }
 
 .game-hub {
@@ -120,10 +73,6 @@ video {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     text-align: center;
     margin-bottom: 20px;
-}
-
-.games-container {
-    margin-top: 20px;
 }
 
 .game-section {
@@ -312,11 +261,16 @@ video {
         width: 100%;
     }
     
-    .controls-area, .game-selector {
-        flex-direction: column;
+    .controls-area {
+        flex-direction: row;
+        flex-wrap: wrap;
         gap: 10px;
-        width: 100%;
-        max-width: none;
+        justify-content: center;
+        margin-top: 10px;
+    }
+    
+    .controls-area button {
+        flex: 1;
     }
     
     .game-section, .youtube-section, .chat-section, .game-hub {

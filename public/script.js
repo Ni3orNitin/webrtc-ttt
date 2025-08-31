@@ -392,7 +392,14 @@ muteSpeakerBtn.addEventListener('click', () => {
     }
 });
 endCallBtn.addEventListener('click', endCall);
-
+restartBtn.addEventListener('click', () => {
+    if (isInitiator) {
+        signalingSocket.send(JSON.stringify({ type: 'restart', game: 'tic-tac-toe' }));
+        resetGame('tic-tac-toe');
+    } else {
+        statusText.textContent = "Only the host can restart.";
+    }
+});
 sendBtn.addEventListener("click", handleChatSend);
 loadBtn.addEventListener('click', handleYouTubeLoad);
 
