@@ -13,19 +13,7 @@ const muteSpeakerBtn = document.getElementById("muteSpeakerBtn");
 const endCallBtn = document.getElementById("endCallBtn");
 
 const ticTacToeBtn = document.getElementById("ticTacToeBtn");
-const hangmanBtn = document.getElementById("hangmanBtn");
-const ticTacToeGame = document.getElementById("ticTacToeGame");
-const hangmanGame = document.getElementById("hangmanGame");
-const ticTacToeBoard = document.querySelectorAll("#ticTacToeGame .cell");
-
-const hangmanDisplay = document.getElementById("hangmanDisplay");
-const wordDisplay = document.getElementById("wordDisplay");
-const usedLettersDisplay = document.getElementById("usedLetters");
-const hangmanStatus = document.getElementById("hangmanStatus");
-const hangmanRestartBtn = document.getElementById("hangmanRestartBtn");
-const guessInput = document.getElementById("guessInput");
-const guessBtn = document.getElementById("guessBtn");
-
+const board = document.querySelectorAll(".cell");
 const statusText = document.getElementById("status");
 const restartBtn = document.getElementById("restartBtn");
 const chatInput = document.getElementById("chatInput");
@@ -36,7 +24,6 @@ const loadBtn = document.getElementById("loadBtn");
 const playerXScoreDisplay = document.getElementById("playerXScore");
 const playerOScoreDisplay = document.getElementById("playerOScore");
 
-// NOTE: You MUST replace this URL with the one from your Render deployment.
 const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
 
 let localStream;
@@ -53,98 +40,10 @@ let isSyncing = false;
 let scoreX = 0;
 let scoreO = 0;
 
-let currentGame = "tic-tac-toe";
-let secretWord = "";
-let guessedLetters = [];
-let incorrectGuesses = 0;
-const maxIncorrectGuesses = 6;
-
-const iceServers = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" }
-  ]
-};
-
 const ticTacToeWinningConditions = [
   [0, 1, 2], [3, 4, 5], [6, 7, 8],
   [0, 3, 6], [1, 4, 7], [2, 5, 8],
   [0, 4, 8], [2, 4, 6]
-];
-
-const hangmanFigures = [
-    `
-      +---+
-      |   |
-          |
-          |
-          |
-          |
-    =========
-    `,
-    `
-      +---+
-      |   |
-      O   |
-          |
-          |
-          |
-    =========
-    `,
-    `
-      +---+
-      |   |
-      O   |
-      |   |
-          |
-          |
-    =========
-    `,
-    `
-      +---+
-      |   |
-      O   |
-     /|   |
-          |
-          |
-    =========
-    `,
-    `
-      +---+
-      |   |
-      O   |
-     /|\\  |
-          |
-          |
-    =========
-    `,
-    `
-      +---+
-      |   |
-      O   |
-     /|\\  |
-     /    |
-          |
-    =========
-    `,
-    `
-      +---+
-      |   |
-      O   |
-     /|\\  |
-     / \\  |
-          |
-    =========
-    `
-];
-
-// FIX: New list of 50 random words for Hangman
-const hangmanWords = [
-    "APPLE", "BANANA", "CHERRY", "ORANGE", "GRAPE", "LEMON", "KIWI", "MANGO", "PEAR", "PLUM",
-    "FARMER", "DOCTOR", "POLICE", "TEACHER", "CHEF", "PILOT", "ARTIST", "SINGER", "WRITER", "JUDGE",
-    "COW", "HORSE", "SHEEP", "GOAT", "PIG", "DUCK", "CHICKEN", "TURKEY", "ROOSTER", "CAT",
-    "BICYCLE", "CAR", "BUS", "TRAIN", "BOAT", "PLANE", "HELICOPTER", "TRUCK", "SCOOTER", "TAXI",
-    "OCEAN", "MOUNTAIN", "RIVER", "FOREST", "LAKE", "DESERT", "JUNGLE", "ISLAND", "CANYON", "VOLCANO"
 ];
 
 // ==========================
@@ -254,12 +153,6 @@ async function joinCall() {
                     console.log("❌ Remote peer ended the call.");
                     endCall();
                     break;
-                case 'hangman_start':
-                    startHangmanGame(data.word, data.player);
-                    break;
-                case 'hangman_guess':
-                    handleHangmanGuess(data.letter, data.player);
-                    break;
             }
         };
 
@@ -297,51 +190,7 @@ async function endCall() {
 }
 
 // ==========================
-// 🎮 Game Logic Hub
-// ==========================
-function switchGame(gameId) {
-    currentGame = gameId;
-    ticTacToeGame.classList.add('hidden');
-    hangmanGame.classList.add('hidden');
-    if (gameId === 'tic-tac-toe') {
-        ticTacToeGame.classList.remove('hidden');
-        statusText.textContent = "Waiting for a player...";
-    } else {
-        hangmanGame.classList.remove('hidden');
-        hangmanGame.style.display = 'flex'; // Ensure it's displayed as flex for layout
-        ticTacToeGame.style.display = 'none';
-        initializeHangmanUI();
-    }
-}
-
-function handleRestartBtnClick() {
-    if (currentGame === 'tic-tac-toe') {
-        if (isInitiator) {
-            signalingSocket.send(JSON.stringify({ type: 'restart', game: 'tic-tac-toe' }));
-            resetTicTacToeGame();
-        } else {
-            statusText.textContent = "Only the host can restart.";
-        }
-    } else {
-        if (isInitiator) {
-            let word = hangmanWords [Math.floor(Math.random() * hangmanWords.length)];
-            if (word && signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-                signalingSocket.send(JSON.stringify({ type: 'hangman_start', word: word, player: "X" }));
-                startHangmanGame(word, "X");
-            }
-        } else {
-            hangmanStatus.textContent = "Only the host can start a new game.";
-        }
-    }
-}
-
-function updateScoreDisplay() {
-    playerXScoreDisplay.textContent = `You: ${scoreX}`;
-    playerOScoreDisplay.textContent = `Your Friend: ${scoreO}`;
-}
-
-// ==========================
-// ➡️ Tic-Tac-Toe Logic
+// 🎮 Tic-Tac-Toe Logic
 // ==========================
 function handleTicTacToeClick(e) {
     const cell = e.target;
@@ -363,7 +212,7 @@ function updateTicTacToeBoard(index, player) {
 
 function checkTicTacToeWinner() {
     let roundWon = false;
-    for (let condition of ticTacToeWinningConditions [0]) {
+    for (let condition of ticTacToeWinningConditions) {
         const [a, b, c] = condition;
         if (ticTacToeState [a] && ticTacToeState [a] === ticTacToeState [b] && ticTacToeState [a] === ticTacToeState [c]) {
             roundWon = true;
@@ -388,7 +237,7 @@ function checkTicTacToeWinner() {
     }
 }
 
-function resetTicTacToeGame() {
+function resetGame() {
     currentPlayer = "X";
     gameActive = true;
     ticTacToeState.fill("");
@@ -399,123 +248,26 @@ function resetTicTacToeGame() {
     });
 }
 
-// ==========================
-// ➡️ Hangman Logic
-// ==========================
-function initializeHangmanUI() {
-    hangmanDisplay.textContent = hangmanFigures [0];
-    wordDisplay.textContent = "";
-    usedLettersDisplay.textContent = "";
-    hangmanStatus.textContent = "Click 'Restart Game' to start a new round.";
-}
-
-function startHangmanGame(word, player) {
-    if (gameActive) return;
-    secretWord = word.toUpperCase();
-    guessedLetters = [];
-    incorrectGuesses = 0;
-    gameActive = true;
-    currentPlayer = player;
-    updateHangmanDisplay();
-    hangmanStatus.textContent = `Player ${currentPlayer}'s Turn to guess.`;
-}
-
-function updateHangmanDisplay() {
-    let wordDisplayString = "";
-    for (const letter of secretWord) {
-        if (guessedLetters.includes(letter)) {
-            wordDisplayString += letter + " ";
-        } else {
-            wordDisplayString += "_ ";
-        }
-    }
-    wordDisplay.textContent = wordDisplayString.trim();
-    usedLettersDisplay.textContent = `Used Letters: ${guessedLetters.join(', ')}`;
-    hangmanDisplay.textContent = hangmanFigures [incorrectGuesses];
-}
-
-function handleHangmanGuess(letter, player) {
-    if (!gameActive || player !== currentPlayer) return;
-    letter = letter.toUpperCase();
-    if (guessedLetters.includes(letter)) {
-        hangmanStatus.textContent = `${player} already guessed that letter.`;
-        return;
-    }
-    guessedLetters.push(letter);
-    if (secretWord.includes(letter)) {
-        hangmanStatus.textContent = `Player ${player} guessed correctly!`;
-    } else {
-        incorrectGuesses++;
-        hangmanStatus.textContent = `Player ${player} guessed incorrectly!`;
-    }
-    checkHangmanWinner();
-    updateHangmanDisplay();
-    guessInput.value = '';
-}
-
-function checkHangmanWinner() {
-    let wordGuessed = true;
-    for (const letter of secretWord) {
-        if (!guessedLetters.includes(letter)) {
-            wordGuessed = false;
-            break;
-        }
-    }
-
-    if (wordGuessed) {
-        hangmanStatus.textContent = `🎉 Player ${currentPlayer} Wins! The word was "${secretWord}"`;
-        gameActive = false;
-        if (currentPlayer === "X") {
-            scoreX++;
-        } else {
-            scoreO++;
-        }
-        updateScoreDisplay();
-    } else if (incorrectGuesses >= maxIncorrectGuesses) {
-        hangmanStatus.textContent = `😮 Game Over! The word was "${secretWord}"`;
-        gameActive = false;
-    } else {
-        currentPlayer = currentPlayer === "X" ? "O" : "X";
-        hangmanStatus.textContent = `Player ${currentPlayer}'s Turn to guess.`;
-    }
+function updateScoreDisplay() {
+    playerXScoreDisplay.textContent = `You: ${scoreX}`;
+    playerOScoreDisplay.textContent = `Your Friend: ${scoreO}`;
 }
 
 // ==========================
-// 💬 Simple Chat (with Hangman guessing)
+// 💬 Simple Chat
 // ==========================
 function handleChatSend() {
     const msg = chatInput.value.trim();
     if (!msg) return;
-
-    if (currentGame === 'hangman' && gameActive && msg.length === 1 && /^[a-zA-Z]$/.test(msg) && currentPlayer === (isInitiator ? "X" : "O")) {
-        if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-            signalingSocket.send(JSON.stringify({ type: 'hangman_guess', letter: msg, player: currentPlayer }));
-            handleHangmanGuess(msg, currentPlayer);
-        }
-    } else {
-        const p = document.createElement("p");
-        p.textContent = `You: ${msg}`;
-        chatMessages.appendChild(p);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-        if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-            signalingSocket.send(JSON.stringify({ type: "chat", message: msg }));
-        }
+    const p = document.createElement("p");
+    p.textContent = `You: ${msg}`;
+    chatMessages.appendChild(p);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+        signalingSocket.send(JSON.stringify({ type: "chat", message: msg }));
     }
-
     chatInput.value = "";
 }
-
-// Handle guess button click
-guessBtn.addEventListener('click', () => {
-    const guess = guessInput.value.trim();
-    if (currentGame === 'hangman' && gameActive && guess.length === 1 && /^[a-zA-Z]$/.test(guess) && currentPlayer === (isInitiator ? "X" : "O")) {
-        if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-            signalingSocket.send(JSON.stringify({ type: 'hangman_guess', letter: guess, player: currentPlayer }));
-            handleHangmanGuess(guess, currentPlayer);
-        }
-    }
-    guessInput.value = '';
-});
 
 // ==========================
 // 🎵 YouTube Music Player
@@ -640,19 +392,9 @@ muteSpeakerBtn.addEventListener('click', () => {
     }
 });
 endCallBtn.addEventListener('click', endCall);
-restartBtn.addEventListener('click', handleRestartBtnClick);
-hangmanRestartBtn.addEventListener('click', handleRestartBtnClick);
+
 sendBtn.addEventListener("click", handleChatSend);
 loadBtn.addEventListener('click', handleYouTubeLoad);
 
-ticTacToeBtn.addEventListener('click', () => {
-    switchGame('tic-tac-toe');
-    updateScoreDisplay();
-});
-hangmanBtn.addEventListener('click', () => {
-    switchGame('hangman');
-    updateScoreDisplay();
-});
-
-ticTacToeBoard.forEach(cell => cell.addEventListener("click", handleTicTacToeClick));
+board.forEach(cell => cell.addEventListener("click", handleTicTacToeClick));
 updateScoreDisplay();
