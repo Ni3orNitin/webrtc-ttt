@@ -54,32 +54,3 @@ video {
     font-weight: bold;
     color: #a0a0a0;
 }
-
-.controls-area {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-    align-items: center;
-    margin-top: 20px;
-}
-
-.controls-area button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    background-color: #6200ea;
-    color: #fff;
-    transition: background-color 0.2s ease;
-}
-
-.controls-area button:hover {
-    background-color: #3700b3;
-}
-
-.controls-area button.active {
-    background-color: #b00020;
-    color: #fff;
-}

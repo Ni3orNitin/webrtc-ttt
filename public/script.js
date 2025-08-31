@@ -1,12 +1,12 @@
 // ==========================
-// 🎥 WebRTC Video Call Logic
+// ➡️ Final Consolidated script.js (Video Only)
+// ==========================
+
+// ==========================
+// DOM Elements and Constants
 // ==========================
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
-const joinBtn = document.getElementById("joinBtn");
-const muteMicBtn = document.getElementById("muteMicBtn");
-const muteSpeakerBtn = document.getElementById("muteSpeakerBtn");
-const endCallBtn = document.getElementById("endCallBtn");
 
 // NOTE: You MUST replace this URL with the one from your Render deployment.
 const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
@@ -19,10 +19,15 @@ let signalingSocket;
 const iceServers = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" }
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" }
   ]
 };
 
+// ==========================
+// 🎥 WebRTC Video Call Logic
+// ==========================
 async function startLocalStream() {
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -70,7 +75,7 @@ async function startCall(initiator) {
     }
 }
 
-async function joinCall() {
+async function connectToSignaling() {
     try {
         await startLocalStream();
         signalingSocket = new WebSocket(signalingServerUrl);
@@ -113,11 +118,8 @@ async function joinCall() {
                     break;
             }
         };
-
-        joinBtn.disabled = true;
-        joinBtn.textContent = 'Connecting...';
     } catch (err) {
-        console.error("❌ Could not join call:", err);
+        console.error("❌ Could not connect to signaling:", err);
     }
 }
 
@@ -134,51 +136,13 @@ async function endCall() {
     }
 
     remoteVideo.srcObject = null;
-
-    joinBtn.disabled = false;
-    joinBtn.textContent = 'Join Call';
-    isInitiator = false;
     console.log("❌ Call ended.");
 
     if (signalingSocket) {
-        signalingSocket.send(JSON.stringify({ type: 'end_call' }));
         signalingSocket.close();
         signalingSocket = null;
     }
 }
 
-// ==========================
-// ⚙️ Event Listeners
-// ==========================
-joinBtn.addEventListener('click', joinCall);
-muteMicBtn.addEventListener('click', () => {
-    if (!localStream) return;
-    const audioTrack = localStream.getAudioTracks() [0];
-    if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        if (!audioTrack.enabled) {
-            muteMicBtn.textContent = 'Unmute Mic';
-            muteMicBtn.classList.add('active');
-        } else {
-            muteMicBtn.textContent = 'Mute Mic';
-            muteMicBtn.classList.remove('active');
-        }
-    }
-});
-
-muteSpeakerBtn.addEventListener('click', () => {
-    if (!remoteVideo || !remoteVideo.srcObject) return;
-    const remoteStream = remoteVideo.srcObject;
-    const audioTrack = remoteStream.getAudioTracks() [0];
-    if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        if (!audioTrack.enabled) {
-            muteSpeakerBtn.textContent = 'Unmute Speaker';
-            muteSpeakerBtn.classList.add('active');
-         } else {
-            muteSpeakerBtn.textContent = 'Mute Speaker';
-            muteSpeakerBtn.classList.remove('active');
-        }
-    }
-});
-endCallBtn.addEventListener('click', endCall);
+// FIX: Automatically connect when the page loads
+window.addEventListener('load', connectToSignaling);
