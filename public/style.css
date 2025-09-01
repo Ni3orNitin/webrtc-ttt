@@ -128,6 +128,12 @@ video {
     flex-direction: column;
     gap: 5px;
 }
+#chatMessages > div {
+    background-color: #333;
+    padding: 8px;
+    border-radius: 6px;
+    text-align: left;
+}
 .chat-input-container {
     display: flex;
     gap: 10px;

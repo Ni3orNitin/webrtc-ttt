@@ -14,12 +14,15 @@ const gameContainer = document.getElementById("gameContainer");
 const gameTitle = document.getElementById("gameTitle");
 const gameContent = document.getElementById("gameContent");
 
-// --- Video Call Logic ---
-const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
+// --- Global State ---
 let localStream;
 let peerConnection;
 let isInitiator = false;
 let signalingSocket;
+let username = "User" + Math.floor(Math.random() * 1000); // Simple unique name
+
+// --- WebRTC Constants ---
+const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
 const iceServers = {
     iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
@@ -29,6 +32,7 @@ const iceServers = {
     ]
 };
 
+// --- WebRTC Functions ---
 async function startLocalStream() {
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -48,7 +52,7 @@ async function createPeerConnection() {
         peerConnection.addTrack(track, localStream);
     });
     peerConnection.ontrack = (event) => {
-        if (event.streams && event.streams.length > 0) {
+        if (event.streams && event.streams[0]) {
             remoteVideo.srcObject = event.streams[0];
             console.log("✅ Remote stream received.");
         }
@@ -61,13 +65,24 @@ async function createPeerConnection() {
     };
 }
 
+async function startCall(initiator) {
+    isInitiator = initiator;
+    await createPeerConnection();
+    if (isInitiator) {
+        console.log("➡️ Creating WebRTC offer.");
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        signalingSocket.send(JSON.stringify({ type: 'offer', offer: offer }));
+    }
+}
+
 async function joinCall() {
     try {
         await startLocalStream();
         signalingSocket = new WebSocket(signalingServerUrl);
         signalingSocket.onopen = () => {
             console.log("✅ Connected to signaling server.");
-            signalingSocket.send(JSON.stringify({ type: 'client_ready' }));
+            signalingSocket.send(JSON.stringify({ type: 'client_ready', username: username }));
         };
         signalingSocket.onmessage = async (message) => {
             const data = JSON.parse(message.data);
@@ -92,6 +107,15 @@ async function joinCall() {
                     if (data.candidate) {
                         try { await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate)); console.log("⬅️ Added ICE candidate."); } catch (err) { console.error("❌ Error adding received ICE candidate:", err); }
                     }
+                    break;
+                case 'chat_message':
+                    displayChatMessage(data.username, data.message);
+                    break;
+                case 'tic_tac_toe_state':
+                    updateTicTacToeState(data);
+                    break;
+                case 'guess_game_state':
+                    updateGuessingGameState(data);
                     break;
                 case 'end_call':
                     console.log("❌ Remote peer ended the call.");
@@ -164,14 +188,22 @@ muteSpeakerBtn.addEventListener('click', () => {
 });
 
 // --- Chat Logic ---
+function displayChatMessage(sender, message) {
+    const messageElement = document.createElement('div');
+    messageElement.textContent = `${sender}: ${message}`;
+    chatMessages.appendChild(messageElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
 sendBtn.addEventListener('click', () => {
     const message = chatInput.value.trim();
-    if (message) {
-        const messageElement = document.createElement('div');
-        messageElement.textContent = `You: ${message}`;
-        chatMessages.appendChild(messageElement);
+    if (message && signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+        signalingSocket.send(JSON.stringify({
+            type: 'chat_message',
+            username: username,
+            message: message
+        }));
         chatInput.value = '';
-        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 });
 
@@ -182,78 +214,37 @@ chatInput.addEventListener('keydown', (e) => {
 });
 
 // --- Games Logic ---
+let gameData = {}; // Stores the current game state
 
-// Tic Tac Toe
-let ticTacToeBoard;
-let ticTacToeStatus;
-let ticTacToeCells;
-let ticTacToeGameActive = true;
-let currentPlayer = 'X';
-let gameState = ['', '', '', '', '', '', '', '', ''];
-const winningConditions = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8],
-    [0, 3, 6], [1, 4, 7], [2, 5, 8],
-    [0, 4, 8], [2, 4, 6]
-];
-
-function handleCellPlayed(clickedCell, clickedCellIndex) {
-    gameState[clickedCellIndex] = currentPlayer;
-    clickedCell.textContent = currentPlayer;
-    clickedCell.classList.add('taken');
+// Tic-Tac-Toe
+function handleTicTacToeClick(e) {
+    if (!gameData.gameActive || gameData.currentPlayer !== username) return;
+    const clickedCellIndex = parseInt(e.target.getAttribute('data-index'));
+    if (gameData.gameState[clickedCellIndex] !== '') return;
+    
+    signalingSocket.send(JSON.stringify({
+        type: 'tic_tac_toe_move',
+        index: clickedCellIndex
+    }));
 }
 
-function handlePlayerChange() {
-    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-    ticTacToeStatus.textContent = `Player ${currentPlayer}'s Turn`;
-}
-
-function handleResultValidation() {
-    let roundWon = false;
-    for (let i = 0; i < winningConditions.length; i++) {
-        const winCondition = winningConditions[i];
-        let a = gameState[winCondition[0]];
-        let b = gameState[winCondition[1]];
-        let c = gameState[winCondition[2]];
-        if (a === '' || b === '' || c === '') continue;
-        if (a === b && b === c) {
-            roundWon = true;
-            break;
-        }
-    }
-
-    if (roundWon) {
-        ticTacToeStatus.textContent = `Player ${currentPlayer} has won! 🎉`;
-        ticTacToeGameActive = false;
-        return;
-    }
-
-    let roundDraw = !gameState.includes('');
-    if (roundDraw) {
-        ticTacToeStatus.textContent = `Game ended in a draw! 😔`;
-        ticTacToeGameActive = false;
-        return;
-    }
-
-    handlePlayerChange();
-}
-
-function handleCellClick(e) {
-    const clickedCell = e.target;
-    const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
-    if (gameState[clickedCellIndex] !== '' || !ticTacToeGameActive) return;
-    handleCellPlayed(clickedCell, clickedCellIndex);
-    handleResultValidation();
-}
-
-function handleRestartGame() {
-    ticTacToeGameActive = true;
-    currentPlayer = 'X';
-    gameState = ['', '', '', '', '', '', '', '', ''];
-    ticTacToeStatus.textContent = `Player ${currentPlayer}'s Turn`;
-    ticTacToeCells.forEach(cell => {
-        cell.textContent = '';
-        cell.classList.remove('taken');
+function updateTicTacToeState(data) {
+    gameData = data;
+    const cells = gameContent.querySelectorAll('.cell');
+    const status = gameContent.querySelector('.game-status-section');
+    
+    cells.forEach((cell, index) => {
+        cell.textContent = gameData.gameState[index];
+        cell.classList.toggle('taken', gameData.gameState[index] !== '');
     });
+    
+    if (gameData.winner) {
+        status.textContent = `Player ${gameData.winner} has won! 🎉`;
+    } else if (gameData.draw) {
+        status.textContent = 'Game ended in a draw! 😔';
+    } else {
+        status.textContent = `Player ${gameData.currentPlayer}'s Turn`;
+    }
 }
 
 function loadTicTacToe() {
@@ -270,192 +261,68 @@ function loadTicTacToe() {
             <div class="cell" data-index="7"></div>
             <div class="cell" data-index="8"></div>
         </div>
-        <div class="game-status-section">Player X's Turn</div>
+        <div class="game-status-section">Connecting to opponent...</div>
         <button class="restart-btn">Restart Game</button>
     `;
-
-    ticTacToeBoard = gameContent.querySelector('.board');
-    ticTacToeCells = gameContent.querySelectorAll('.cell');
-    ticTacToeStatus = gameContent.querySelector('.game-status-section');
-    gameContent.querySelector('.restart-btn').addEventListener('click', handleRestartGame);
-    ticTacToeCells.forEach(cell => cell.addEventListener('click', handleCellClick));
-    handleRestartGame();
+    const cells = gameContent.querySelectorAll('.cell');
+    cells.forEach(cell => cell.addEventListener('click', handleTicTacToeClick));
+    gameContent.querySelector('.restart-btn').addEventListener('click', () => {
+        if (signalingSocket) {
+            signalingSocket.send(JSON.stringify({ type: 'tic_tac_toe_restart' }));
+        }
+    });
 }
 
 // Word Guessing Game
-let currentWord, displayWord, turnsLeft, guessedLetters;
-const defaultWordList = ["PYTHON", "PROGRAMMING", "COMPUTER", "KEYBOARD", "DEVELOPER", "ALGORITHM", "VARIABLE"];
-const API_KEY = "YOUR_GEMINI_API_KEY"; // <-- REPLACE WITH YOUR API KEY
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+let wordGuessingState = {};
 
-async function generateWord() {
-    const wordDisplay = gameContent.querySelector('#wordDisplay');
-    const messageDisplay = gameContent.querySelector('#message');
-    
-    wordDisplay.innerHTML = '<div class="loading-spinner"></div>';
-    messageDisplay.textContent = 'Generating a new word...';
-    
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: "Generate a single, common English word for a word guessing game. The word should be between 5 and 10 letters long." }] }],
-                generationConfig: {
-                    responseMimeType: "text/plain"
-                }
-            })
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
-        const result = await response.json();
-        const generatedText = result.candidates[0].content.parts[0].text;
-        
-        const newWord = generatedText.trim().replace(/[^a-zA-Z]/g, '').toUpperCase();
-        
-        if (newWord.length > 0) {
-            currentWord = newWord;
-            initializeGuessingGame();
-        } else {
-            console.error("API returned an empty word. Using fallback list.");
-            currentWord = defaultWordList[Math.floor(Math.random() * defaultWordList.length)];
-            initializeGuessingGame();
-        }
-
-    } catch (error) {
-        console.error("Error generating word via API, using fallback list:", error);
-        currentWord = defaultWordList[Math.floor(Math.random() * defaultWordList.length)];
-        initializeGuessingGame();
-    }
-}
-
-async function getHint() {
-    const hintDisplay = gameContent.querySelector('#hintDisplay');
-    const getHintBtn = gameContent.querySelector('#getHintBtn');
-    
-    if (!currentWord) {
-        hintDisplay.textContent = "Please start a game first.";
-        return;
-    }
-    
-    getHintBtn.disabled = true;
-    hintDisplay.textContent = 'Generating hint...';
-    
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: `Provide a one-sentence, non-obvious hint for the word "${currentWord.toLowerCase()}". Do not use the word itself in the hint.` }] }],
-                generationConfig: {
-                    responseMimeType: "text/plain"
-                }
-            })
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
-        const result = await response.json();
-        const hintText = result.candidates[0].content.parts[0].text;
-        hintDisplay.textContent = `Hint: ${hintText.trim()}`;
-
-    } catch (error) {
-        hintDisplay.textContent = "Error getting hint. Please try again.";
-        console.error("Error getting hint:", error);
-    } finally {
-        getHintBtn.disabled = false;
-    }
-}
-
-function initializeGuessingGame() {
-    displayWord = new Array(currentWord.length).fill('_');
-    turnsLeft = 6;
-    guessedLetters = new Set();
-    
-    const messageDisplay = gameContent.querySelector('#message');
+function handleGuessClick() {
     const guessInput = gameContent.querySelector('#guessInput');
-    const guessBtn = gameContent.querySelector('#guessBtn');
-    const hintDisplay = gameContent.querySelector('#hintDisplay');
-    
-    updateGuessingGameUI();
-    messageDisplay.textContent = `The word has ${currentWord.length} letters.`;
-    
-    guessInput.value = '';
-    guessInput.disabled = false;
-    guessBtn.disabled = false;
-    hintDisplay.textContent = '';
+    const guess = guessInput.value.toUpperCase();
+    if (guess && signalingSocket) {
+        signalingSocket.send(JSON.stringify({
+            type: 'guess_game_move',
+            guess: guess
+        }));
+        guessInput.value = '';
+    }
 }
 
-function updateGuessingGameUI() {
+function handleHintClick() {
+    if (signalingSocket) {
+        signalingSocket.send(JSON.stringify({ type: 'guess_game_hint' }));
+    }
+}
+
+function updateGuessingGameState(data) {
+    wordGuessingState = data;
     const wordDisplay = gameContent.querySelector('#wordDisplay');
     const turnsDisplay = gameContent.querySelector('#turnsDisplay');
+    const messageDisplay = gameContent.querySelector('#message');
     const usedLettersDisplay = gameContent.querySelector('#usedLetters');
-    
-    wordDisplay.textContent = displayWord.join(' ');
-    turnsDisplay.textContent = `Turns left: ${turnsLeft}`;
-    usedLettersDisplay.textContent = `Used letters: ${Array.from(guessedLetters).join(', ')}`;
-}
-
-function handleGuess() {
+    const hintDisplay = gameContent.querySelector('#hintDisplay');
     const guessInput = gameContent.querySelector('#guessInput');
     const guessBtn = gameContent.querySelector('#guessBtn');
-    const messageDisplay = gameContent.querySelector('#message');
-    
-    const guess = guessInput.value.toUpperCase();
-    guessInput.value = '';
-    
-    if (!guess || guess.length !== 1 || !/^[A-Z]$/.test(guess)) {
-        messageDisplay.textContent = "Please enter a single, valid letter.";
-        return;
-    }
 
-    if (guessedLetters.has(guess)) {
-        messageDisplay.textContent = "You already guessed that letter. Try a new one.";
-        return;
-    }
+    wordDisplay.textContent = wordGuessingState.displayWord.join(' ');
+    turnsDisplay.textContent = `Turns left: ${wordGuessingState.turnsLeft}`;
+    messageDisplay.textContent = wordGuessingState.message;
+    usedLettersDisplay.textContent = `Used letters: ${Array.from(wordGuessingState.guessedLetters).join(', ')}`;
+    hintDisplay.textContent = `Hint: ${wordGuessingState.hint}`;
     
-    guessedLetters.add(guess);
-    
-    if (currentWord.includes(guess)) {
-        messageDisplay.textContent = "Good guess!";
-        for (let i = 0; i < currentWord.length; i++) {
-            if (currentWord[i] === guess) {
-                displayWord[i] = guess;
-            }
-        }
+    if (wordGuessingState.gameStatus === 'over') {
+        guessInput.disabled = true;
+        guessBtn.disabled = true;
     } else {
-        messageDisplay.textContent = `Sorry, '${guess}' is not in the word.`;
-        turnsLeft--;
+        guessInput.disabled = false;
+        guessBtn.disabled = false;
     }
-
-    updateGuessingGameUI();
-    checkGameState();
-}
-
-function checkGameState() {
-    const messageDisplay = gameContent.querySelector('#message');
-    
-    if (!displayWord.includes('_')) {
-        messageDisplay.textContent = `Congratulations! You guessed the word: ${currentWord} 🎉`;
-        endGuessingGame();
-    } else if (turnsLeft <= 0) {
-        messageDisplay.textContent = `You ran out of turns. The word was: ${currentWord} 😔`;
-        endGuessingGame();
-    }
-}
-
-function endGuessingGame() {
-    const guessInput = gameContent.querySelector('#guessInput');
-    const guessBtn = gameContent.querySelector('#guessBtn');
-    guessInput.disabled = true;
-    guessBtn.disabled = true;
 }
 
 function loadGuessingGame() {
     gameTitle.textContent = "Word Guessing Game";
     gameContent.innerHTML = `
-        <p class="message-display" id="message">Loading a new word...</p>
+        <p class="message-display" id="message">Waiting for opponent...</p>
         <div class="word-display" id="wordDisplay"></div>
         <div class="turns-display" id="turnsDisplay"></div>
         <div class="game-input-group">
@@ -467,17 +334,13 @@ function loadGuessingGame() {
         <p class="used-letters" id="usedLetters"></p>
         <button class="restart-btn" id="restartBtn">Restart Game</button>
     `;
-
-    gameContent.querySelector('#guessBtn').addEventListener('click', handleGuess);
-    gameContent.querySelector('#guessInput').addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            handleGuess();
+    gameContent.querySelector('#guessBtn').addEventListener('click', handleGuessClick);
+    gameContent.querySelector('#getHintBtn').addEventListener('click', handleHintClick);
+    gameContent.querySelector('#restartBtn').addEventListener('click', () => {
+        if (signalingSocket) {
+            signalingSocket.send(JSON.stringify({ type: 'guess_game_restart' }));
         }
     });
-    gameContent.querySelector('#restartBtn').addEventListener('click', generateWord);
-    gameContent.querySelector('#getHintBtn').addEventListener('click', getHint);
-
-    generateWord();
 }
 
 // Button listeners to load games
