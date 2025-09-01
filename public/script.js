@@ -121,6 +121,12 @@ async function joinCall() {
                     console.log("❌ Remote peer ended the call.");
                     endCall();
                     break;
+                case 'game_ready':
+                    // This is the key change: Listen for the server's "game ready" message.
+                    // When received, initialize the games.
+                    loadTicTacToe();
+                    loadGuessingGame();
+                    break;
             }
         };
         joinBtn.classList.add('hidden');
@@ -214,10 +220,11 @@ chatInput.addEventListener('keydown', (e) => {
 });
 
 // --- Games Logic ---
-let gameData = {}; // Stores the current game state
+let gameData = {};
 
 // Tic-Tac-Toe
 function handleTicTacToeClick(e) {
+    // Game logic for a synchronized two-player experience
     if (!gameData.gameActive || gameData.currentPlayer !== username) return;
     const clickedCellIndex = parseInt(e.target.getAttribute('data-index'));
     if (gameData.gameState[clickedCellIndex] !== '') return;
@@ -261,7 +268,7 @@ function loadTicTacToe() {
             <div class="cell" data-index="7"></div>
             <div class="cell" data-index="8"></div>
         </div>
-        <div class="game-status-section">Connecting to opponent...</div>
+        <div class="game-status-section">Waiting for opponent...</div>
         <button class="restart-btn">Restart Game</button>
     `;
     const cells = gameContent.querySelectorAll('.cell');
@@ -275,11 +282,15 @@ function loadTicTacToe() {
 
 // Word Guessing Game
 let wordGuessingState = {};
+const defaultWordList = ["PYTHON", "PROGRAMMING", "COMPUTER", "KEYBOARD", "DEVELOPER", "ALGORITHM", "VARIABLE"];
+const API_KEY = "YOUR_GEMINI_API_KEY";
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+
 
 function handleGuessClick() {
-    const guessInput = gameContent.querySelector('#guessInput');
-    const guess = guessInput.value.toUpperCase();
-    if (guess && signalingSocket) {
+    if (signalingSocket && wordGuessingState.gameStatus !== 'over') {
+        const guessInput = gameContent.querySelector('#guessInput');
+        const guess = guessInput.value.toUpperCase();
         signalingSocket.send(JSON.stringify({
             type: 'guess_game_move',
             guess: guess
@@ -289,7 +300,7 @@ function handleGuessClick() {
 }
 
 function handleHintClick() {
-    if (signalingSocket) {
+    if (signalingSocket && wordGuessingState.gameStatus === 'playing') {
         signalingSocket.send(JSON.stringify({ type: 'guess_game_hint' }));
     }
 }
