@@ -3,58 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to the Room</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #121212;
-            color: #e0e0e0;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            text-align: center;
-        }
-        .container {
-            padding: 40px;
-            background-color: #1e1e1e;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-        }
-        h1 {
-            color: #fff;
-            margin-bottom: 20px;
-        }
-        .button-group {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-        }
-        .app-btn {
-            padding: 15px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            background-color: #6200ea;
-            color: #fff;
-            transition: background-color 0.2s ease;
-        }
-        .app-btn:hover {
-            background-color: #3700b3;
-        }
-    </style>
+    <title>Real-Time Room</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <h1>Welcome to the Real-Time Room</h1>
-        <p>Choose an application to join:</p>
-        <div class="button-group">
-            <a href="video.html"><button class="app-btn">Join Video Call</button></a>
-            <a href="games.html"><button class="app-btn">Play Games</button></a>
+        <div class="main-layout">
+            <div class="left-column">
+                <div class="video-container">
+                    <h2>Video Call</h2>
+                    <div class="video-grid">
+                        <video id="localVideo" autoplay muted playsinline></video>
+                        <video id="remoteVideo" autoplay playsinline></video>
+                    </div>
+                    <div class="controls">
+                        <button id="joinBtn" class="control-btn">Join Call</button>
+                        <button id="muteMicBtn" class="control-btn hidden">Mute Mic</button>
+                        <button id="muteSpeakerBtn" class="control-btn hidden">Mute Speaker</button>
+                        <button id="endCallBtn" class="control-btn hidden">End Call</button>
+                    </div>
+                </div>
+                <div class="game-section">
+                    <h3>Chat</h3>
+                    <div id="chatMessages" style="height: 150px; overflow-y: auto; border: 1px solid #444; padding: 10px; border-radius: 8px; background: #282828; margin-bottom: 15px;"></div>
+                    <div class="game-input-group" style="width: 100%;">
+                        <input type="text" id="chatInput" placeholder="Type your message..." style="flex-grow: 1;">
+                        <button id="sendBtn">Send</button>
+                    </div>
+                </div>
+            </div>
+            <div class="right-column">
+                <div class="game-section">
+                    <h3>Choose a Game</h3>
+                    <div class="game-hub">
+                        <button id="ticTacToeBtn" class="game-btn">Tic Tac Toe</button>
+                        <button id="guessGameBtn" class="game-btn">Word Guessing Game</button>
+                    </div>
+                </div>
+                <div id="gameContainer" class="game-section">
+                    <h3 id="gameTitle">Game</h3>
+                    <div id="gameContent">
+                        <p>Select a game from the hub above.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+    <script src="script.js"></script>
 </body>
 </html>
