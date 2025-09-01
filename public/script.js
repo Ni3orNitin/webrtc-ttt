@@ -1,3 +1,4 @@
+// DOM Elements
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const joinBtn = document.getElementById("joinBtn");
@@ -58,17 +59,6 @@ async function createPeerConnection() {
             signalingSocket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
         }
     };
-}
-
-async function startCall(initiator) {
-    isInitiator = initiator;
-    await createPeerConnection();
-    if (isInitiator) {
-        console.log("➡️ Creating WebRTC offer.");
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        signalingSocket.send(JSON.stringify({ type: 'offer', offer: offer }));
-    }
 }
 
 async function joinCall() {
@@ -173,30 +163,294 @@ muteSpeakerBtn.addEventListener('click', () => {
     }
 });
 
-// --- Game Logic Integration ---
+// --- Chat Logic ---
+sendBtn.addEventListener('click', () => {
+    const message = chatInput.value.trim();
+    if (message) {
+        const messageElement = document.createElement('div');
+        messageElement.textContent = `You: ${message}`;
+        chatMessages.appendChild(messageElement);
+        chatInput.value = '';
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+});
+
+chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        sendBtn.click();
+    }
+});
+
+// --- Games Logic ---
+
+// Tic Tac Toe
+let ticTacToeBoard;
+let ticTacToeStatus;
+let ticTacToeCells;
+let ticTacToeGameActive = true;
+let currentPlayer = 'X';
+let gameState = ['', '', '', '', '', '', '', '', ''];
+const winningConditions = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6]
+];
+
+function handleCellPlayed(clickedCell, clickedCellIndex) {
+    gameState[clickedCellIndex] = currentPlayer;
+    clickedCell.textContent = currentPlayer;
+    clickedCell.classList.add('taken');
+}
+
+function handlePlayerChange() {
+    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    ticTacToeStatus.textContent = `Player ${currentPlayer}'s Turn`;
+}
+
+function handleResultValidation() {
+    let roundWon = false;
+    for (let i = 0; i < winningConditions.length; i++) {
+        const winCondition = winningConditions[i];
+        let a = gameState[winCondition[0]];
+        let b = gameState[winCondition[1]];
+        let c = gameState[winCondition[2]];
+        if (a === '' || b === '' || c === '') continue;
+        if (a === b && b === c) {
+            roundWon = true;
+            break;
+        }
+    }
+
+    if (roundWon) {
+        ticTacToeStatus.textContent = `Player ${currentPlayer} has won! 🎉`;
+        ticTacToeGameActive = false;
+        return;
+    }
+
+    let roundDraw = !gameState.includes('');
+    if (roundDraw) {
+        ticTacToeStatus.textContent = `Game ended in a draw! 😔`;
+        ticTacToeGameActive = false;
+        return;
+    }
+
+    handlePlayerChange();
+}
+
+function handleCellClick(e) {
+    const clickedCell = e.target;
+    const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+    if (gameState[clickedCellIndex] !== '' || !ticTacToeGameActive) return;
+    handleCellPlayed(clickedCell, clickedCellIndex);
+    handleResultValidation();
+}
+
+function handleRestartGame() {
+    ticTacToeGameActive = true;
+    currentPlayer = 'X';
+    gameState = ['', '', '', '', '', '', '', '', ''];
+    ticTacToeStatus.textContent = `Player ${currentPlayer}'s Turn`;
+    ticTacToeCells.forEach(cell => {
+        cell.textContent = '';
+        cell.classList.remove('taken');
+    });
+}
+
 function loadTicTacToe() {
     gameTitle.textContent = "Tic Tac Toe";
     gameContent.innerHTML = `
-        <div class="board" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 300px; margin: 15px auto;">
-            <div class="cell" data-index="0" style="width: 100px; height: 100px; background: #333; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: bold; cursor: pointer; border-radius: 8px;"></div>
-            <div class="cell" data-index="1" style="width: 100px; height: 100px; background: #333;"></div>
-            <div class="cell" data-index="2" style="width: 100px; height: 100px; background: #333;"></div>
-            <div class="cell" data-index="3" style="width: 100px; height: 100px; background: #333;"></div>
-            <div class="cell" data-index="4" style="width: 100px; height: 100px; background: #333;"></div>
-            <div class="cell" data-index="5" style="width: 100px; height: 100px; background: #333;"></div>
-            <div class="cell" data-index="6" style="width: 100px; height: 100px; background: #333;"></div>
-            <div class="cell" data-index="7" style="width: 100px; height: 100px; background: #333;"></div>
-            <div class="cell" data-index="8" style="width: 100px; height: 100px; background: #333;"></div>
+        <div class="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
         </div>
-        <div class="status" style="font-size: 1.2rem; font-weight: bold; margin: 10px 0;">Player X's Turn</div>
-        <button class="restart-btn" style="margin-top: 15px;">Restart Game</button>
+        <div class="game-status-section">Player X's Turn</div>
+        <button class="restart-btn">Restart Game</button>
     `;
-    // Add Tic Tac Toe game logic here
+
+    ticTacToeBoard = gameContent.querySelector('.board');
+    ticTacToeCells = gameContent.querySelectorAll('.cell');
+    ticTacToeStatus = gameContent.querySelector('.game-status-section');
+    gameContent.querySelector('.restart-btn').addEventListener('click', handleRestartGame);
+    ticTacToeCells.forEach(cell => cell.addEventListener('click', handleCellClick));
+    handleRestartGame();
 }
 
+// Word Guessing Game
 let currentWord, displayWord, turnsLeft, guessedLetters;
 const defaultWordList = ["PYTHON", "PROGRAMMING", "COMPUTER", "KEYBOARD", "DEVELOPER", "ALGORITHM", "VARIABLE"];
-const apiKey = ""; // You need to set your API key here.
+const API_KEY = "YOUR_GEMINI_API_KEY"; // <-- REPLACE WITH YOUR API KEY
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+
+async function generateWord() {
+    const wordDisplay = gameContent.querySelector('#wordDisplay');
+    const messageDisplay = gameContent.querySelector('#message');
+    
+    wordDisplay.innerHTML = '<div class="loading-spinner"></div>';
+    messageDisplay.textContent = 'Generating a new word...';
+    
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: "Generate a single, common English word for a word guessing game. The word should be between 5 and 10 letters long." }] }],
+                generationConfig: {
+                    responseMimeType: "text/plain"
+                }
+            })
+        });
+
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const result = await response.json();
+        const generatedText = result.candidates[0].content.parts[0].text;
+        
+        const newWord = generatedText.trim().replace(/[^a-zA-Z]/g, '').toUpperCase();
+        
+        if (newWord.length > 0) {
+            currentWord = newWord;
+            initializeGuessingGame();
+        } else {
+            console.error("API returned an empty word. Using fallback list.");
+            currentWord = defaultWordList[Math.floor(Math.random() * defaultWordList.length)];
+            initializeGuessingGame();
+        }
+
+    } catch (error) {
+        console.error("Error generating word via API, using fallback list:", error);
+        currentWord = defaultWordList[Math.floor(Math.random() * defaultWordList.length)];
+        initializeGuessingGame();
+    }
+}
+
+async function getHint() {
+    const hintDisplay = gameContent.querySelector('#hintDisplay');
+    const getHintBtn = gameContent.querySelector('#getHintBtn');
+    
+    if (!currentWord) {
+        hintDisplay.textContent = "Please start a game first.";
+        return;
+    }
+    
+    getHintBtn.disabled = true;
+    hintDisplay.textContent = 'Generating hint...';
+    
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: `Provide a one-sentence, non-obvious hint for the word "${currentWord.toLowerCase()}". Do not use the word itself in the hint.` }] }],
+                generationConfig: {
+                    responseMimeType: "text/plain"
+                }
+            })
+        });
+
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const result = await response.json();
+        const hintText = result.candidates[0].content.parts[0].text;
+        hintDisplay.textContent = `Hint: ${hintText.trim()}`;
+
+    } catch (error) {
+        hintDisplay.textContent = "Error getting hint. Please try again.";
+        console.error("Error getting hint:", error);
+    } finally {
+        getHintBtn.disabled = false;
+    }
+}
+
+function initializeGuessingGame() {
+    displayWord = new Array(currentWord.length).fill('_');
+    turnsLeft = 6;
+    guessedLetters = new Set();
+    
+    const messageDisplay = gameContent.querySelector('#message');
+    const guessInput = gameContent.querySelector('#guessInput');
+    const guessBtn = gameContent.querySelector('#guessBtn');
+    const hintDisplay = gameContent.querySelector('#hintDisplay');
+    
+    updateGuessingGameUI();
+    messageDisplay.textContent = `The word has ${currentWord.length} letters.`;
+    
+    guessInput.value = '';
+    guessInput.disabled = false;
+    guessBtn.disabled = false;
+    hintDisplay.textContent = '';
+}
+
+function updateGuessingGameUI() {
+    const wordDisplay = gameContent.querySelector('#wordDisplay');
+    const turnsDisplay = gameContent.querySelector('#turnsDisplay');
+    const usedLettersDisplay = gameContent.querySelector('#usedLetters');
+    
+    wordDisplay.textContent = displayWord.join(' ');
+    turnsDisplay.textContent = `Turns left: ${turnsLeft}`;
+    usedLettersDisplay.textContent = `Used letters: ${Array.from(guessedLetters).join(', ')}`;
+}
+
+function handleGuess() {
+    const guessInput = gameContent.querySelector('#guessInput');
+    const guessBtn = gameContent.querySelector('#guessBtn');
+    const messageDisplay = gameContent.querySelector('#message');
+    
+    const guess = guessInput.value.toUpperCase();
+    guessInput.value = '';
+    
+    if (!guess || guess.length !== 1 || !/^[A-Z]$/.test(guess)) {
+        messageDisplay.textContent = "Please enter a single, valid letter.";
+        return;
+    }
+
+    if (guessedLetters.has(guess)) {
+        messageDisplay.textContent = "You already guessed that letter. Try a new one.";
+        return;
+    }
+    
+    guessedLetters.add(guess);
+    
+    if (currentWord.includes(guess)) {
+        messageDisplay.textContent = "Good guess!";
+        for (let i = 0; i < currentWord.length; i++) {
+            if (currentWord[i] === guess) {
+                displayWord[i] = guess;
+            }
+        }
+    } else {
+        messageDisplay.textContent = `Sorry, '${guess}' is not in the word.`;
+        turnsLeft--;
+    }
+
+    updateGuessingGameUI();
+    checkGameState();
+}
+
+function checkGameState() {
+    const messageDisplay = gameContent.querySelector('#message');
+    
+    if (!displayWord.includes('_')) {
+        messageDisplay.textContent = `Congratulations! You guessed the word: ${currentWord} 🎉`;
+        endGuessingGame();
+    } else if (turnsLeft <= 0) {
+        messageDisplay.textContent = `You ran out of turns. The word was: ${currentWord} 😔`;
+        endGuessingGame();
+    }
+}
+
+function endGuessingGame() {
+    const guessInput = gameContent.querySelector('#guessInput');
+    const guessBtn = gameContent.querySelector('#guessBtn');
+    guessInput.disabled = true;
+    guessBtn.disabled = true;
+}
 
 function loadGuessingGame() {
     gameTitle.textContent = "Word Guessing Game";
@@ -208,137 +462,24 @@ function loadGuessingGame() {
             <input type="text" id="guessInput" maxlength="1" placeholder="Guess a letter">
             <button id="guessBtn" class="game-btn">Guess</button>
         </div>
-        <div id="hintDisplay" class="mt-4 text-sm text-gray-700"></div>
+        <div id="hintDisplay"></div>
         <button id="getHintBtn" class="game-btn" style="background-color: #ff5722;">Get a Hint</button>
         <p class="used-letters" id="usedLetters"></p>
         <button class="restart-btn" id="restartBtn">Restart Game</button>
     `;
-    
-    const wordDisplay = document.getElementById('wordDisplay');
-    const messageDisplay = document.getElementById('message');
-    const turnsDisplay = document.getElementById('turnsDisplay');
-    const usedLettersDisplay = document.getElementById('usedLetters');
-    const guessInput = document.getElementById('guessInput');
-    const guessBtn = document.getElementById('guessBtn');
-    const restartBtn = document.getElementById('restartBtn');
-    const getHintBtn = document.getElementById('getHintBtn');
-    const hintDisplay = document.getElementById('hintDisplay');
-    
-    // Guessing Game Functions
-    async function generateWord() {
-        wordDisplay.innerHTML = '<div class="loading-spinner"></div>';
-        messageDisplay.textContent = 'Generating a new word...';
-        try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: "Generate a single, common English word for a word guessing game. The word should be between 5 and 10 letters long." }] }], generationConfig: { responseMimeType: "text/plain" } })
-            });
-            const result = await response.json();
-            const newWord = result.candidates[0].content.parts[0].text.trim().replace(/[^a-zA-Z]/g, '').toUpperCase();
-            currentWord = newWord.length > 0 ? newWord : defaultWordList[Math.floor(Math.random() * defaultWordList.length)];
-            initializeGame();
-        } catch (error) {
-            console.error("Error generating word, using fallback:", error);
-            currentWord = defaultWordList[Math.floor(Math.random() * defaultWordList.length)];
-            initializeGame();
-        }
-    }
 
-    async function getHint() {
-        if (!currentWord) { hintDisplay.textContent = "Please start a game first."; return; }
-        getHintBtn.disabled = true;
-        hintDisplay.textContent = 'Generating hint...';
-        try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: `Provide a one-sentence, non-obvious hint for the word "${currentWord.toLowerCase()}". Do not use the word itself in the hint.` }] }], generationConfig: { responseMimeType: "text/plain" } })
-            });
-            const result = await response.json();
-            const hintText = result.candidates[0].content.parts[0].text;
-            hintDisplay.textContent = `Hint: ${hintText.trim()}`;
-        } catch (error) {
-            hintDisplay.textContent = "Error getting hint. Please try again.";
-            console.error("Error getting hint:", error);
-        } finally { getHintBtn.disabled = false; }
-    }
-
-    function initializeGame() {
-        displayWord = new Array(currentWord.length).fill('_');
-        turnsLeft = 6;
-        guessedLetters = new Set();
-        updateUI();
-        messageDisplay.textContent = `The word has ${currentWord.length} letters.`;
-        guessInput.value = '';
-        guessInput.disabled = false;
-        guessBtn.disabled = false;
-        hintDisplay.textContent = '';
-    }
-
-    function updateUI() {
-        wordDisplay.textContent = displayWord.join(' ');
-        turnsDisplay.textContent = `Turns left: ${turnsLeft}`;
-        usedLettersDisplay.textContent = `Used letters: ${Array.from(guessedLetters).join(', ')}`;
-    }
-
-    function handleGuess() {
-        const guess = guessInput.value.toUpperCase();
-        guessInput.value = '';
-        if (!guess || guess.length !== 1 || !/^[A-Z]$/.test(guess)) {
-            messageDisplay.textContent = "Please enter a single, valid letter.";
-            return;
-        }
-        if (guessedLetters.has(guess)) {
-            messageDisplay.textContent = "You already guessed that letter. Try a new one.";
-            return;
-        }
-        guessedLetters.add(guess);
-        if (currentWord.includes(guess)) {
-            messageDisplay.textContent = "Good guess!";
-            for (let i = 0; i < currentWord.length; i++) {
-                if (currentWord[i] === guess) {
-                    displayWord[i] = guess;
-                }
-            }
-        } else {
-            messageDisplay.textContent = `Sorry, '${guess}' is not in the word.`;
-            turnsLeft--;
-        }
-        updateUI();
-        checkGameState();
-    }
-
-    function checkGameState() {
-        if (!displayWord.includes('_')) {
-            messageDisplay.textContent = `Congratulations! You guessed the word: ${currentWord} 🎉`;
-            endGame();
-        } else if (turnsLeft <= 0) {
-            messageDisplay.textContent = `You ran out of turns. The word was: ${currentWord} 😔`;
-            endGame();
-        }
-    }
-    
-    function endGame() {
-        guessInput.disabled = true;
-        guessBtn.disabled = true;
-    }
-    
-    guessBtn.addEventListener('click', handleGuess);
-    guessInput.addEventListener('keydown', (event) => {
+    gameContent.querySelector('#guessBtn').addEventListener('click', handleGuess);
+    gameContent.querySelector('#guessInput').addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
             handleGuess();
         }
     });
-    restartBtn.addEventListener('click', () => {
-        endGame();
-        generateWord();
-    });
-    getHintBtn.addEventListener('click', getHint);
+    gameContent.querySelector('#restartBtn').addEventListener('click', generateWord);
+    gameContent.querySelector('#getHintBtn').addEventListener('click', getHint);
 
-    // Initial call to start the game
     generateWord();
 }
 
+// Button listeners to load games
 ticTacToeBtn.addEventListener('click', loadTicTacToe);
 guessGameBtn.addEventListener('click', loadGuessingGame);
