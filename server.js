@@ -131,19 +131,28 @@ wss.on("connection", (ws) => {
             } else {
                 ticTacToeState.currentPlayer = (player === 'X') ? 'O' : 'X';
             }
-
-            gameRoom.forEach(client => client.send(JSON.stringify({ type: 'tic_tac_toe_state', ...ticTacToeState })));
+            
+            // Broadcast the updated state to all clients
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: 'tic_tac_toe_state', ...ticTacToeState }));
+                }
+            });
             return;
         }
 
         // Handle Tic-Tac-Toe restart
         if (data.type === 'tic_tac_toe_restart') {
             initializeTicTacToeGame();
-            gameRoom.forEach(client => client.send(JSON.stringify({ type: 'tic_tac_toe_state', ...ticTacToeState })));
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: 'tic_tac_toe_state', ...ticTacToeState }));
+                }
+            });
             return;
         }
 
-        // Handle Word Guessing moves (simplified for example)
+        // Handle Word Guessing moves
         if (data.type === 'guess_game_move' && guessGameState.gameStatus === 'playing') {
             const guess = data.guess.toUpperCase();
             if (guess.length !== 1 || !/^[A-Z]$/.test(guess) || guessGameState.guessedLetters.includes(guess)) {
@@ -174,15 +183,23 @@ wss.on("connection", (ws) => {
                 guessGameState.message = `You ran out of turns. The word was: ${guessGameState.currentWord} 😔`;
                 guessGameState.gameStatus = 'over';
             }
-
-            gameRoom.forEach(client => client.send(JSON.stringify({ type: 'guess_game_state', ...guessGameState })));
+            
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: 'guess_game_state', ...guessGameState }));
+                }
+            });
             return;
         }
 
         // Handle Guessing Game restart
         if (data.type === 'guess_game_restart') {
             initializeGuessingGame();
-            gameRoom.forEach(client => client.send(JSON.stringify({ type: 'guess_game_state', ...guessGameState })));
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: 'guess_game_state', ...guessGameState }));
+                }
+            });
             return;
         }
     });

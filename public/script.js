@@ -121,11 +121,9 @@ async function joinCall() {
                     console.log("❌ Remote peer ended the call.");
                     endCall();
                     break;
-                case 'game_ready':
-                    // This is the key change: Listen for the server's "game ready" message.
-                    // When received, initialize the games.
-                    loadTicTacToe();
-                    loadGuessingGame();
+                case 'client_joined':
+                    // We can use this message to trigger the game
+                    console.log("A client joined. The game should start soon.");
                     break;
             }
         };
@@ -224,7 +222,6 @@ let gameData = {};
 
 // Tic-Tac-Toe
 function handleTicTacToeClick(e) {
-    // Game logic for a synchronized two-player experience
     if (!gameData.gameActive || gameData.currentPlayer !== username) return;
     const clickedCellIndex = parseInt(e.target.getAttribute('data-index'));
     if (gameData.gameState[clickedCellIndex] !== '') return;
