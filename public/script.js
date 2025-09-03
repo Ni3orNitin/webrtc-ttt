@@ -10,6 +10,7 @@ const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
 const ticTacToeBtn = document.getElementById("ticTacToeBtn");
 const guessGameBtn = document.getElementById("guessGameBtn");
+const youtubeBtn = document.getElementById("youtubeBtn");
 const gameContainer = document.getElementById("gameContainer");
 const gameTitle = document.getElementById("gameTitle");
 const gameContent = document.getElementById("gameContent");
@@ -19,7 +20,13 @@ let localStream;
 let peerConnection;
 let isInitiator = false;
 let signalingSocket;
-let username = "User" + Math.floor(Math.random() * 1000); // Simple unique name
+let username = "User" + Math.floor(Math.random() * 1000);
+
+// YouTube Player state
+let youtubePlayer;
+const playlistId = 'PLIlng4MI3pW-5OQE84UnfPGJLf_of-91Y';
+let isPlayerReady = false;
+let ignorePlayerEvents = false;
 
 // --- WebRTC Constants ---
 const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
@@ -117,13 +124,29 @@ async function joinCall() {
                 case 'guess_game_state':
                     updateGuessingGameState(data);
                     break;
+                case 'youtube_play':
+                    if (youtubePlayer && isPlayerReady) {
+                        ignorePlayerEvents = true;
+                        youtubePlayer.seekTo(data.time, true);
+                        youtubePlayer.playVideo();
+                    }
+                    break;
+                case 'youtube_pause':
+                    if (youtubePlayer && isPlayerReady) {
+                        ignorePlayerEvents = true;
+                        youtubePlayer.seekTo(data.time, true);
+                        youtubePlayer.pauseVideo();
+                    }
+                    break;
+                case 'youtube_next':
+                    if (youtubePlayer && isPlayerReady) {
+                        ignorePlayerEvents = true;
+                        youtubePlayer.nextVideo();
+                    }
+                    break;
                 case 'end_call':
                     console.log("❌ Remote peer ended the call.");
                     endCall();
-                    break;
-                case 'client_joined':
-                    // We can use this message to trigger the game
-                    console.log("A client joined. The game should start soon.");
                     break;
             }
         };
@@ -217,10 +240,54 @@ chatInput.addEventListener('keydown', (e) => {
     }
 });
 
+// --- YouTube Watch Party Logic ---
+function handleYouTubeStateChange(event) {
+    if (ignorePlayerEvents) {
+        ignorePlayerEvents = false;
+        return;
+    }
+
+    if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
+        let state = event.data;
+        if (state === YT.PlayerState.PLAYING) {
+            signalingSocket.send(JSON.stringify({ type: 'youtube_play', time: youtubePlayer.getCurrentTime() }));
+        } else if (state === YT.PlayerState.PAUSED) {
+            signalingSocket.send(JSON.stringify({ type: 'youtube_pause', time: youtubePlayer.getCurrentTime() }));
+        } else if (state === YT.PlayerState.ENDED) {
+            signalingSocket.send(JSON.stringify({ type: 'youtube_next' }));
+        }
+    }
+}
+
+function onYouTubeIframeAPIReady() {
+    console.log("YouTube API is ready.");
+    isPlayerReady = true;
+}
+
+function loadYouTubePlayer() {
+    gameTitle.textContent = "YouTube Watch Party";
+    gameContent.innerHTML = `
+        <div id="youtubePlayer" style="width: 100%; aspect-ratio: 16/9;"></div>
+        <p style="margin-top: 10px; color: #aaa;">Any user can control the playback.</p>
+    `;
+    
+    if (isPlayerReady) {
+        youtubePlayer = new YT.Player('youtubePlayer', {
+            videoId: '8sLS2knUa6Y', // Default video from your playlist
+            playerVars: {
+                listType: 'playlist',
+                list: playlistId
+            },
+            events: {
+                onStateChange: handleYouTubeStateChange
+            }
+        });
+    }
+}
+
 // --- Games Logic ---
 let gameData = {};
 
-// Tic-Tac-Toe
 function handleTicTacToeClick(e) {
     if (!gameData.gameActive || gameData.currentPlayer !== username) return;
     const clickedCellIndex = parseInt(e.target.getAttribute('data-index'));
@@ -243,7 +310,7 @@ function updateTicTacToeState(data) {
     });
     
     if (gameData.winner) {
-        status.textContent = `Player ${gameData.winner} has won! 🎉`;
+        status.textContent = `Player ${data.winner} has won! 🎉`;
     } else if (gameData.draw) {
         status.textContent = 'Game ended in a draw! 😔';
     } else {
@@ -354,3 +421,4 @@ function loadGuessingGame() {
 // Button listeners to load games
 ticTacToeBtn.addEventListener('click', loadTicTacToe);
 guessGameBtn.addEventListener('click', loadGuessingGame);
+youtubeBtn.addEventListener('click', loadYouTubePlayer);
