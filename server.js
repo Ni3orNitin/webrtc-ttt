@@ -81,22 +81,6 @@ wss.on("connection", (ws) => {
             return;
         }
         
-        // This is the core fix: A single broadcast for all sync-reliant events.
-        const broadcastTypes = [
-            'guess_game_move', 'guess_game_restart',
-            'chat_message'
-        ];
-
-        if (broadcastTypes.includes(data.type)) {
-            wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify(data));
-                }
-            });
-            return;
-        }
-
-        // WebRTC specific messages are still forwarded to the other client
         if (['offer', 'answer', 'candidate', 'end_call'].includes(data.type)) {
             const otherClient = gameRoom.find(client => client !== ws);
             if (otherClient && otherClient.readyState === WebSocket.OPEN) {
@@ -104,6 +88,17 @@ wss.on("connection", (ws) => {
             }
             return;
         }
+        
+        if (data.type === 'chat_message') {
+            gameRoom.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify(data));
+                }
+            });
+            return;
+        }
+        
+        const playerClient = gameRoom.find(client => client.id === ws.id);
 
         if (data.type === 'guess_game_move' && guessGameState.gameStatus === 'playing') {
             const guess = data.guess.toUpperCase();
@@ -145,7 +140,8 @@ wss.on("connection", (ws) => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify({ type: 'guess_game_state', ...guessGameState }));
                 }
-            });
+            }
+            );
             return;
         }
     });
