@@ -7,7 +7,6 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 
-// Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 const server = http.createServer(app);
@@ -108,28 +107,15 @@ wss.on("connection", (ws) => {
             return;
         }
         
-        // Broadcast messages to all clients, excluding the sender for specific messages
-        const broadcastToAll = ['chat_message', 'tic_tac_toe_state', 'tic_tac_toe_restart', 'guess_game_state', 'guess_game_restart'];
-        const broadcastToOthers = ['youtube_play', 'youtube_pause', 'youtube_next'];
-
-        if (broadcastToAll.includes(data.type)) {
-             wss.clients.forEach(client => {
+        if (data.type === 'chat_message') {
+            gameRoom.forEach(client => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify(data));
                 }
             });
             return;
         }
-
-        if (broadcastToOthers.includes(data.type)) {
-            wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN && client !== ws) {
-                    client.send(JSON.stringify(data));
-                }
-            });
-            return;
-        }
-
+        
         const playerClient = gameRoom.find(client => client.id === ws.id);
 
         if (data.type === 'tic_tac_toe_move' && ticTacToeState.gameActive) {
@@ -219,6 +205,19 @@ wss.on("connection", (ws) => {
             wss.clients.forEach(client => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify({ type: 'guess_game_state', ...guessGameState }));
+                }
+            });
+            return;
+        }
+
+        // --- CORRECTED YOUTUBE SYNC LOGIC ---
+        // It now broadcasts to all clients to ensure synchronization.
+        if (data.type.startsWith('youtube_')) {
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    // Send the message to all clients, including the one who sent it.
+                    // This is for instant feedback. The client-side logic will handle it.
+                    client.send(JSON.stringify(data));
                 }
             });
             return;
