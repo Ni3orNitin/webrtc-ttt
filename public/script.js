@@ -8,9 +8,7 @@ const endCallBtn = document.getElementById("endCallBtn");
 const chatMessages = document.getElementById("chatMessages");
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
-const ticTacToeBtn = document.getElementById("ticTacToeBtn");
 const guessGameBtn = document.getElementById("guessGameBtn");
-const youtubeBtn = document.getElementById("youtubeBtn");
 const gameContainer = document.getElementById("gameContainer");
 const gameTitle = document.getElementById("gameTitle");
 const gameContent = document.getElementById("gameContent");
@@ -21,12 +19,6 @@ let peerConnection;
 let isInitiator = false;
 let signalingSocket;
 let username = "User" + Math.floor(Math.random() * 1000);
-
-// YouTube Player state
-let youtubePlayer;
-const playlistId = 'PLIlng4MI3pW-5OQE84UnfPGJLf_of-91Y';
-let isPlayerReady = false;
-let ignorePlayerEvents = false;
 
 // --- WebRTC Constants ---
 const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
@@ -118,31 +110,8 @@ async function joinCall() {
                 case 'chat_message':
                     displayChatMessage(data.username, data.message);
                     break;
-                case 'tic_tac_toe_state':
-                    updateTicTacToeState(data);
-                    break;
                 case 'guess_game_state':
                     updateGuessingGameState(data);
-                    break;
-                case 'youtube_play':
-                    if (youtubePlayer && isPlayerReady) {
-                        ignorePlayerEvents = true;
-                        youtubePlayer.seekTo(data.time, true);
-                        youtubePlayer.playVideo();
-                    }
-                    break;
-                case 'youtube_pause':
-                    if (youtubePlayer && isPlayerReady) {
-                        ignorePlayerEvents = true;
-                        youtubePlayer.seekTo(data.time, true);
-                        youtubePlayer.pauseVideo();
-                    }
-                    break;
-                case 'youtube_next':
-                    if (youtubePlayer && isPlayerReady) {
-                        ignorePlayerEvents = true;
-                        youtubePlayer.nextVideo();
-                    }
                     break;
                 case 'end_call':
                     console.log("❌ Remote peer ended the call.");
@@ -240,111 +209,7 @@ chatInput.addEventListener('keydown', (e) => {
     }
 });
 
-// --- YouTube Watch Party Logic ---
-function handleYouTubeStateChange(event) {
-    if (ignorePlayerEvents) {
-        ignorePlayerEvents = false;
-        return;
-    }
-
-    if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-        let state = event.data;
-        if (state === YT.PlayerState.PLAYING) {
-            signalingSocket.send(JSON.stringify({ type: 'youtube_play', time: youtubePlayer.getCurrentTime() }));
-        } else if (state === YT.PlayerState.PAUSED) {
-            signalingSocket.send(JSON.stringify({ type: 'youtube_pause', time: youtubePlayer.getCurrentTime() }));
-        } else if (state === YT.PlayerState.ENDED) {
-            signalingSocket.send(JSON.stringify({ type: 'youtube_next' }));
-        }
-    }
-}
-
-function onYouTubeIframeAPIReady() {
-    console.log("YouTube API is ready.");
-    isPlayerReady = true;
-}
-
-function loadYouTubePlayer() {
-    gameTitle.textContent = "YouTube Watch Party";
-    gameContent.innerHTML = `
-        <div id="youtubePlayer" style="width: 100%; aspect-ratio: 16/9;"></div>
-        <p style="margin-top: 10px; color: #aaa;">Any user can control the playback.</p>
-    `;
-    
-    if (isPlayerReady) {
-        youtubePlayer = new YT.Player('youtubePlayer', {
-            videoId: '8sLS2knUa6Y', // Default video from your playlist
-            playerVars: {
-                listType: 'playlist',
-                list: playlistId
-            },
-            events: {
-                onStateChange: handleYouTubeStateChange
-            }
-        });
-    }
-}
-
 // --- Games Logic ---
-let gameData = {};
-
-function handleTicTacToeClick(e) {
-    if (!gameData.gameActive || gameData.currentPlayer !== username) return;
-    const clickedCellIndex = parseInt(e.target.getAttribute('data-index'));
-    if (gameData.gameState[clickedCellIndex] !== '') return;
-    
-    signalingSocket.send(JSON.stringify({
-        type: 'tic_tac_toe_move',
-        index: clickedCellIndex
-    }));
-}
-
-function updateTicTacToeState(data) {
-    gameData = data;
-    const cells = gameContent.querySelectorAll('.cell');
-    const status = gameContent.querySelector('.game-status-section');
-    
-    cells.forEach((cell, index) => {
-        cell.textContent = gameData.gameState[index];
-        cell.classList.toggle('taken', gameData.gameState[index] !== '');
-    });
-    
-    if (gameData.winner) {
-        status.textContent = `Player ${data.winner} has won! 🎉`;
-    } else if (gameData.draw) {
-        status.textContent = 'Game ended in a draw! 😔';
-    } else {
-        status.textContent = `Player ${gameData.currentPlayer}'s Turn`;
-    }
-}
-
-function loadTicTacToe() {
-    gameTitle.textContent = "Tic Tac Toe";
-    gameContent.innerHTML = `
-        <div class="board">
-            <div class="cell" data-index="0"></div>
-            <div class="cell" data-index="1"></div>
-            <div class="cell" data-index="2"></div>
-            <div class="cell" data-index="3"></div>
-            <div class="cell" data-index="4"></div>
-            <div class="cell" data-index="5"></div>
-            <div class="cell" data-index="6"></div>
-            <div class="cell" data-index="7"></div>
-            <div class="cell" data-index="8"></div>
-        </div>
-        <div class="game-status-section">Waiting for opponent...</div>
-        <button class="restart-btn">Restart Game</button>
-    `;
-    const cells = gameContent.querySelectorAll('.cell');
-    cells.forEach(cell => cell.addEventListener('click', handleTicTacToeClick));
-    gameContent.querySelector('.restart-btn').addEventListener('click', () => {
-        if (signalingSocket) {
-            signalingSocket.send(JSON.stringify({ type: 'tic_tac_toe_restart' }));
-        }
-    });
-}
-
-// Word Guessing Game
 let wordGuessingState = {};
 const defaultWordList = ["PYTHON", "PROGRAMMING", "COMPUTER", "KEYBOARD", "DEVELOPER", "ALGORITHM", "VARIABLE"];
 const API_KEY = "YOUR_GEMINI_API_KEY";
@@ -419,6 +284,4 @@ function loadGuessingGame() {
 }
 
 // Button listeners to load games
-ticTacToeBtn.addEventListener('click', loadTicTacToe);
 guessGameBtn.addEventListener('click', loadGuessingGame);
-youtubeBtn.addEventListener('click', loadYouTubePlayer);

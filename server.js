@@ -14,9 +14,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 let gameRoom = [];
-let ticTacToeState = {};
 let guessGameState = {};
-let youtubeSyncState = {};
 
 // Expanded word list
 const wordLists = {
@@ -40,21 +38,6 @@ function getRandomWord() {
     const randomDifficulty = difficulties[Math.floor(Math.random() * difficulties.length)];
     const wordList = wordLists[randomDifficulty];
     return wordList[Math.floor(Math.random() * wordList.length)];
-}
-
-// Function to initialize a new Tic-Tac-Toe game
-function initializeTicTacToeGame() {
-    ticTacToeState = {
-        gameState: ['', '', '', '', '', '', '', '', ''],
-        currentPlayer: 'X',
-        gameActive: true,
-        winner: null,
-        draw: false,
-    };
-    if (gameRoom.length === 2) {
-        gameRoom[0].player = 'X';
-        gameRoom[1].player = 'O';
-    }
 }
 
 // Function to initialize a new Word Guessing Game
@@ -81,11 +64,9 @@ wss.on("connection", (ws) => {
     if (gameRoom.length === 2) {
         console.log("➡️ Two clients connected. Starting peer connections and games.");
         gameRoom[0].send(JSON.stringify({ type: 'peer_connected' }));
-        initializeTicTacToeGame();
         initializeGuessingGame();
         gameRoom.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({ type: 'tic_tac_toe_state', ...ticTacToeState }));
                 client.send(JSON.stringify({ type: 'guess_game_state', ...guessGameState }));
             }
         });
@@ -100,6 +81,22 @@ wss.on("connection", (ws) => {
             return;
         }
         
+        // This is the core fix: A single broadcast for all sync-reliant events.
+        const broadcastTypes = [
+            'guess_game_move', 'guess_game_restart',
+            'chat_message'
+        ];
+
+        if (broadcastTypes.includes(data.type)) {
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify(data));
+                }
+            });
+            return;
+        }
+
+        // WebRTC specific messages are still forwarded to the other client
         if (['offer', 'answer', 'candidate', 'end_call'].includes(data.type)) {
             const otherClient = gameRoom.find(client => client !== ws);
             if (otherClient && otherClient.readyState === WebSocket.OPEN) {
@@ -107,66 +104,7 @@ wss.on("connection", (ws) => {
             }
             return;
         }
-        
-        if (data.type === 'chat_message') {
-            gameRoom.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify(data));
-                }
-            });
-            return;
-        }
-        
-        const playerClient = gameRoom.find(client => client.id === ws.id);
 
-        if (data.type === 'tic_tac_toe_move' && ticTacToeState.gameActive) {
-            const player = playerClient.player;
-            if (ticTacToeState.currentPlayer !== player) return;
-            if (ticTacToeState.gameState[data.index] !== '') return;
-
-            ticTacToeState.gameState[data.index] = player;
-            
-            const winningConditions = [
-                [0, 1, 2], [3, 4, 5], [6, 7, 8],
-                [0, 3, 6], [1, 4, 7], [2, 5, 8],
-                [0, 4, 8], [2, 4, 6]
-            ];
-            let roundWon = false;
-            for (let i = 0; i < winningConditions.length; i++) {
-                const [a, b, c] = winningConditions[i];
-                if (ticTacToeState.gameState[a] && ticTacToeState.gameState[a] === ticTacToeState.gameState[b] && ticTacToeState.gameState[a] === ticTacToeState.gameState[c]) {
-                    roundWon = true;
-                    break;
-                }
-            }
-            if (roundWon) {
-                ticTacToeState.winner = player;
-                ticTacToeState.gameActive = false;
-            } else if (!ticTacToeState.gameState.includes('')) {
-                ticTacToeState.draw = true;
-                ticTacToeState.gameActive = false;
-            } else {
-                ticTacToeState.currentPlayer = (player === 'X') ? 'O' : 'X';
-            }
-            
-            wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({ type: 'tic_tac_toe_state', ...ticTacToeState }));
-                }
-            });
-            return;
-        }
-
-        if (data.type === 'tic_tac_toe_restart') {
-            initializeTicTacToeGame();
-            wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({ type: 'tic_tac_toe_state', ...ticTacToeState }));
-                }
-            });
-            return;
-        }
-        
         if (data.type === 'guess_game_move' && guessGameState.gameStatus === 'playing') {
             const guess = data.guess.toUpperCase();
             if (guess.length !== 1 || !/^[A-Z]$/.test(guess) || guessGameState.guessedLetters.includes(guess)) {
@@ -210,16 +148,6 @@ wss.on("connection", (ws) => {
             });
             return;
         }
-
-        // CORRECTED: YouTube sync logic
-        if (data.type === 'youtube_play' || data.type === 'youtube_pause' || data.type === 'youtube_next') {
-            wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN && client !== ws) {
-                    client.send(JSON.stringify(data));
-                }
-            });
-            return;
-        }
     });
 
     ws.on("close", () => {
@@ -227,9 +155,7 @@ wss.on("connection", (ws) => {
         gameRoom = gameRoom.filter(client => client.id !== ws.id);
         if (gameRoom.length === 1) {
             console.log("Only one client remaining. Restarting games.");
-            initializeTicTacToeGame();
             initializeGuessingGame();
-            gameRoom[0].send(JSON.stringify({ type: 'tic_tac_toe_state', ...ticTacToeState }));
             gameRoom[0].send(JSON.stringify({ type: 'guess_game_state', ...guessGameState }));
         }
     });
