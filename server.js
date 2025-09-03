@@ -16,7 +16,7 @@ const wss = new WebSocket.Server({ server });
 let gameRoom = [];
 let ticTacToeState = {};
 let guessGameState = {};
-let youtubeSyncState = {}; // New state for YouTube sync
+let youtubeSyncState = {};
 
 // Expanded word list
 const wordLists = {
@@ -116,12 +116,11 @@ wss.on("connection", (ws) => {
             });
             return;
         }
-
-        // CORRECTED: Find the player from the gameRoom array
+        
         const playerClient = gameRoom.find(client => client.id === ws.id);
 
         if (data.type === 'tic_tac_toe_move' && ticTacToeState.gameActive) {
-            const player = playerClient.player; 
+            const player = playerClient.player;
             if (ticTacToeState.currentPlayer !== player) return;
             if (ticTacToeState.gameState[data.index] !== '') return;
 
@@ -212,7 +211,6 @@ wss.on("connection", (ws) => {
             return;
         }
 
-        // Add YouTube Sync Logic
         if (data.type === 'youtube_play' || data.type === 'youtube_pause' || data.type === 'youtube_next') {
             wss.clients.forEach(client => {
                 if (client.readyState === WebSocket.OPEN && client !== ws) {
