@@ -7,6 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 
+// Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 const server = http.createServer(app);
@@ -210,13 +211,10 @@ wss.on("connection", (ws) => {
             return;
         }
 
-        // --- CORRECTED YOUTUBE SYNC LOGIC ---
-        // It now broadcasts to all clients to ensure synchronization.
-        if (data.type.startsWith('youtube_')) {
+        // CORRECTED: YouTube sync logic
+        if (data.type === 'youtube_play' || data.type === 'youtube_pause' || data.type === 'youtube_next') {
             wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    // Send the message to all clients, including the one who sent it.
-                    // This is for instant feedback. The client-side logic will handle it.
+                if (client.readyState === WebSocket.OPEN && client !== ws) {
                     client.send(JSON.stringify(data));
                 }
             });
