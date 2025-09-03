@@ -211,6 +211,7 @@ wss.on("connection", (ws) => {
             return;
         }
 
+        // CORRECTED: YouTube sync logic
         if (data.type === 'youtube_play' || data.type === 'youtube_pause' || data.type === 'youtube_next') {
             wss.clients.forEach(client => {
                 if (client.readyState === WebSocket.OPEN && client !== ws) {
