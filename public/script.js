@@ -297,3 +297,15 @@ function loadGuessingGame() {
 
 // Button listeners to load games
 guessGameBtn.addEventListener('click', loadGuessingGame);
+
+// Chess game button handler
+document.getElementById("chessGameBtn").addEventListener("click", () => {
+    document.getElementById("gameTitle").innerText = "Chess Game";
+    document.getElementById("gameContent").innerHTML = `
+        <iframe src="chess/index.html" 
+                width="600" 
+                height="600" 
+                style="border:none;">
+        </iframe>
+    `;
+});
