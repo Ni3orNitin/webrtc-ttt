@@ -14,23 +14,35 @@ body {
   gap: 20px;
 }
 
+/* Chess container wrapper */
+.chess-container {
+  width: 100%;             /* full width of parent */
+  max-width: 500px;        /* limit max size for desktop */
+  aspect-ratio: 1 / 1;     /* always square */
+  margin: 0 auto;          /* center align */
+}
+
 /* Chessboard grid */
 #chessboard {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;         /* no overflow */
+  aspect-ratio: 1 / 1;     /* keep it square */
   display: grid;
-  grid-template-columns: repeat(8, 70px);
-  grid-template-rows: repeat(8, 70px);
-  margin: 20px auto;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
   border: 3px solid #333;
+  margin: 20px auto;
 }
 
 /* Individual squares */
 .square {
-  width: 70px;
-  height: 70px;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 38px;
+  font-size: calc(1.5vw + 1vh); /* responsive chess pieces */
   cursor: pointer;
 }
 
@@ -62,3 +74,13 @@ body {
   min-width: 200px;
   background: white;
 }
+
+.chess-frame {
+  width: 100%;
+  max-width: 600px;   /* bada screen par limit */
+  height: 80vh;       /* screen height ka 80% */
+  border: none;
+  display: block;
+  margin: 0 auto;     /* center align */
+}
+

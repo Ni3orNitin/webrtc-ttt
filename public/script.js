@@ -303,8 +303,7 @@ document.getElementById("chessGameBtn").addEventListener("click", () => {
     document.getElementById("gameTitle").innerText = "Chess Game";
     document.getElementById("gameContent").innerHTML = `
         <iframe src="chess/index.html" 
-                width="600" 
-                height="600" 
+                class="chess-frame"
                 style="border:none;">
         </iframe>
     `;
